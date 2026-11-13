@@ -7,7 +7,11 @@ const config = {
   baseUrl: '/',
 
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
+  },
 
   themes: [
     [
@@ -16,6 +20,7 @@ const config = {
         hashed: true,
         indexDocs: true,
         indexPages: true,
+        indexBlog: false,
         searchBarPosition: 'right',
       },
     ],
