@@ -1,0 +1,126 @@
+:root {
+  --ifm-color-primary: #c94f12;
+  --ifm-color-primary-dark: #b94710;
+  --ifm-color-primary-darker: #ae4310;
+  --ifm-color-primary-darkest: #90370d;
+  --ifm-color-primary-light: #d65b1c;
+  --ifm-color-primary-lighter: #df6625;
+  --ifm-color-primary-lightest: #ed8241;
+  --ifm-font-family-base: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --ifm-heading-font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --ifm-heading-font-weight: 650;
+  --ifm-link-decoration: none;
+  --ifm-link-hover-decoration: none;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  letter-spacing: -0.01em;
+}
+
+.navbar {
+  --ifm-navbar-background-color: var(--ifm-background-surface-color);
+  box-shadow: 0 1px 0 var(--ifm-color-emphasis-200);
+}
+
+.navbar__title {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.navbar__logo {
+  height: 2rem;
+}
+
+.navbar__link {
+  font-weight: 550;
+}
+
+.footer--dark {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: #261b16;
+  color: #eadfd6;
+}
+
+.footer--dark .footer__title {
+  color: #fff9f5;
+  font-size: 0.78rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.footer--dark .footer__link-item {
+  color: #d4c2b5;
+  font-size: 0.9rem;
+}
+
+.footer--dark .footer__link-item:hover {
+  color: #fff;
+}
+
+.footer--dark .footer__bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  color: #c1afa2;
+  font-size: 0.82rem;
+}
+
+.theme-doc-sidebar-container {
+  border-right: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.menu__link {
+  border-radius: 0.45rem;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.menu__link--active:not(.menu__link--sublist) {
+  font-weight: 650;
+}
+
+.pagination-nav__link {
+  border-radius: 0.75rem;
+  transition:
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.pagination-nav__link:hover {
+  transform: translateY(-2px);
+}
+
+.theme-doc-markdown {
+  font-size: 1.03rem;
+  line-height: 1.8;
+}
+
+.theme-doc-markdown h1 {
+  letter-spacing: -0.045em;
+}
+
+.theme-doc-markdown h2,
+.theme-doc-markdown h3 {
+  letter-spacing: -0.025em;
+}
+
+.theme-doc-markdown blockquote {
+  border-left-color: var(--ifm-color-primary);
+  border-radius: 0 0.75rem 0.75rem 0;
+  background: var(--ifm-color-emphasis-100);
+  padding: 1rem 1.25rem;
+}
+
+.theme-doc-markdown :focus-visible,
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--ifm-color-primary) 55%, transparent);
+  outline-offset: 3px;
+}

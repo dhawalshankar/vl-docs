@@ -1,0 +1,9 @@
+.docusaurus
+.cache-loader
+.env
+.env.*
+!.env.example
+build
+node_modules
+npm-debug.log*
+yarn-debug.log*
