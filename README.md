@@ -30,4 +30,5 @@ npm run build
 - `docs/getting-started/` — getting started and account guides
 - `docs/platform/` — language exchange, jobs, courses, resources, and safety
 - `docs/architecture/` — applications, APIs, integrations, and SSO
-- `docs/development/` — local setup, API overview, and contribution guidance
+- `docs/development/` — team onboarding, repository internals, data models,
+  API inventory, local setup, operations, and contribution guidance

@@ -50,6 +50,11 @@ secret, consumes it once, and creates a learning-platform session. Account
 roles are mapped to LMS roles. The shared secret is server-only and must be
 configured on both services.
 
+The main web application also hosts the two server-side Voice Challenge
+routes. They delegate identity/admin checks to the main API and use Google
+Drive as their recording store. This is separate from the LMS's
+`/api/v1/challenges` metadata and leaderboard API.
+
 ## Other integrations
 
 - **Razorpay** handles paid course checkout through server-created orders and
@@ -60,3 +65,7 @@ configured on both services.
 - **Google OAuth** is supported for account sign-in.
 - **Language games** are a separately linked experience rather than part of
   the LMS API.
+
+For code ownership, configuration, and known cross-service mismatches, see
+[developer onboarding](../development/onboarding.md) and
+[operations](../development/operations.md).

@@ -9,6 +9,10 @@ the community and opportunity product; the learning frontend and API power
 structured courses. These repositories may require separate access and
 service credentials.
 
+Start with the [internal onboarding map](./onboarding.md) for service
+boundaries and the [operations guide](./operations.md) for environment
+ownership, service URLs, and known integration mismatches.
+
 ## Prerequisites
 
 - Node.js compatible with the project's `engines` field (the documentation

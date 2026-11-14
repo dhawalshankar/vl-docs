@@ -9,6 +9,13 @@ a single service. The main product connects learners with people and
 opportunities; VartaLang Learn provides a separate course and enrollment
 experience. Each API owns its own data and domain.
 
+For engineering onboarding, start with the [internal developer onboarding
+map](../development/onboarding.md), then use the
+[repository guides](../development/repository-main-web.md) and
+[data ownership map](../development/data-and-state.md).
+The [system design guide](./system-design.md) distinguishes current design
+decisions from recommended improvements and delivery practices.
+
 ## Services at a glance
 
 | Component | Responsibility | Main technologies |
@@ -23,6 +30,19 @@ experience. Each API owns its own data and domain.
 The frontends and APIs are deployed separately. The main platform uses MongoDB
 for its community and opportunity data, while the learning API uses PostgreSQL
 for courses, enrollments, progress, and related learning records.
+
+```text
+Main browser app (Next.js) --> Main Express API --> MongoDB
+          |                       |     |
+          |                       |     +--> Sarvam AI / Google Translate
+          |                       +--------> Socket.IO
+          |
+          +--> one-time SSO --> LMS browser app (Next.js) --> LMS FastAPI --> PostgreSQL
+                                                                     |--> Razorpay
+                                                                     `--> YouTube Data API
+
+Voice Challenge: main Next.js API route --> Main API identity check --> Google Drive
+```
 
 ## Sign-in across the main platform and Learn
 

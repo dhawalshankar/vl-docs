@@ -106,15 +106,15 @@ export default function Home() {
             </Link>
             <Link
               className={styles.featureCard}
-              to="/docs/architecture/overview"
+              to="/docs/development/onboarding"
             >
               <span className={styles.cardNumber}>03 / BUILD &amp; INTEGRATE</span>
-              <h3>Developer documentation</h3>
+              <h3>Team onboarding</h3>
               <p>
-                Understand the services, integrations, local setup, and API
-                route groups.
+                Map the repositories, services, data ownership, APIs, and
+                operational workflows.
               </p>
-              <span className={styles.cardLink}>View developer docs →</span>
+              <span className={styles.cardLink}>Open developer onboarding →</span>
             </Link>
           </div>
         </section>
@@ -132,6 +132,45 @@ export default function Home() {
           <div className={styles.visionAside}>
             Learn with people, study through courses and resources, and use
             language to connect across cultures and communities.
+          </div>
+        </section>
+
+        <section
+          id="dhawal-shukla"
+          className={styles.vision}
+          aria-labelledby="builder-title"
+        >
+          <div>
+            <p className={styles.sectionEyebrow}>About the builder</p>
+            <h2 id="builder-title">Built and operated by Dhawal Shukla.</h2>
+            <p>
+              Dhawal currently implements, manages, and operates VartaLang.
+              His personal portfolio presents his work and interests across
+              software development, interactive terminal experiences, systems,
+              and security.
+            </p>
+            <div className={styles.heroActions}>
+              <a
+                className={styles.primaryButton}
+                href="https://thewittyswan.space"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Visit Dhawal&apos;s portfolio
+              </a>
+              <a
+                className={styles.secondaryButton}
+                href="https://rzp.io/rzp/U6FewHU"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Buy me an apple
+              </a>
+            </div>
+          </div>
+          <div className={styles.visionAside}>
+            Open to TPM, SDE, SWE, backend engineering, and PM roles with a
+            strong technical edge across India. Ready to relocate.
           </div>
         </section>
 

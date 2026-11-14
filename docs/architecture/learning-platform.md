@@ -9,6 +9,10 @@ Next.js frontend communicates with an independently deployed FastAPI API. The
 API uses PostgreSQL and owns its course, curriculum, enrollment, progress,
 instructor, payment, and administration data.
 
+Internal repo references: [learning web application](../development/repository-learning-web.md),
+[learning API](../development/repository-learning-api.md), and
+[LMS data model](../development/data-and-state.md).
+
 ## Learner experience
 
 The learning application provides a language and course catalog, course
@@ -51,3 +55,9 @@ dictation, and mentor-review features shown with future availability labels
 should be treated as planned experiences, not as currently available AI
 capabilities. Sarvam AI translation and message pronunciation are currently
 implemented in the main platform's chat service.
+
+In particular, `/api/v1/practice/evaluate` currently returns a fixed
+demonstration score/feedback and does not call a speech model. Challenge
+routes can fall back to static sample challenge and leaderboard data. See the
+[learning API guide](../development/repository-learning-api.md#practice-and-challenges)
+before relying on those responses.

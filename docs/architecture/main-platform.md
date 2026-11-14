@@ -31,9 +31,10 @@ authenticated job and language-guide routes. MongoDB stores the main
 platform's user, chat, match, notification, job, and language-guide data.
 
 Socket.IO is attached to the API server for chat and notification events,
-including message delivery, read state, typing/online state, and user
-notifications. The API also supports account hand-off to Learn through
-single-use SSO codes.
+including message delivery, read receipts, block/unblock state, and user
+notifications. Do not assume typing or online-presence events are implemented
+by the current Socket.IO server. The API also supports account hand-off to
+Learn through single-use SSO codes.
 
 ## Matching and communication
 
@@ -53,3 +54,5 @@ reading aid.
 - [Jobs](../platform/jobs.md)
 - [Learning resources](../platform/learning-resources.md)
 - [Safety and trust](../platform/safety-and-trust.md)
+- [Main web application internals](../development/repository-main-web.md)
+- [Main API internals](../development/repository-main-api.md)

@@ -103,8 +103,19 @@ const config = {
             {label: 'Learning platform', href: 'https://learn.vartalang.in'},
           ],
         },
+        {
+          title: 'Creator',
+          items: [
+            {label: 'Dhawal Shukla — portfolio', href: 'https://thewittyswan.space'},
+            {
+              label: 'Open to opportunities',
+              href: 'https://docs.vartalang.in/#dhawal-shukla',
+            },
+            {label: 'Buy me an apple', href: 'https://rzp.io/rzp/U6FewHU'},
+          ],
+        },
       ],
-      copyright: `© ${new Date().getFullYear()} VartaLang. Language connects us.`,
+      copyright: `© ${new Date().getFullYear()} VartaLang. Language connects us. Built and operated by Dhawal Shukla.`,
     },
   },
 };

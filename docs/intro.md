@@ -34,7 +34,7 @@ cultural context, and take part in work and communities across India.
 | [VartaLang Learn](https://learn.vartalang.in) | Course catalog, lessons, enrollments, and learning progress |
 | [Platform architecture](./architecture/overview.md) | How the applications and services fit together |
 | [Getting started](./getting-started/account-and-profile.md) | Account, profile, and learning-platform sign-in |
-| [Developer setup](./development/local-setup.md) | Local development across the four codebases |
+| [Developer onboarding](./development/onboarding.md) | Repositories, data ownership, service flows, APIs, and operations |
 
 The platform is designed around the diversity of Indian languages and the
 cultural knowledge carried through them. Language availability, course
