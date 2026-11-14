@@ -2,10 +2,10 @@
 title: Main platform API
 ---
 
-# Main platform API: `study-projects/vl-backend`
+# Main platform API: `vl-backend`
 
 The main Node.js service is the identity and community API for
-`study-projects/vartalang`. It is independent of the LMS API and is not the
+`vartalang`. It is independent of the LMS API and is not the
 API mounted under `/api/v1`.
 
 ## Runtime and boot sequence

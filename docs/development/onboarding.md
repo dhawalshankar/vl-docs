@@ -28,7 +28,7 @@ before following a runbook.
                 |                                                |
                 v                                                v
   vartalang.in / main Next.js                         learn.vartalang.in
-  study-projects/vartalang                            vl-education
+  vartalang                                           vl-education
   - profile, matching, chat, jobs                     - course catalog/player
   - guides, audio/radio, voice challenge              - learner/instructor/admin UI
                 |                                                |
@@ -36,7 +36,7 @@ before following a runbook.
                 |                                                |
                 v                                                v
   Main Node.js/Express API                         LMS FastAPI API
-  study-projects/vl-backend                        vl-lms-backend
+  vl-backend                                       vl-lms-backend
   - auth, profile, matches, chat                    - auth/SSO, courses, enrollments
   - jobs, language guides, notifications            - progress, payments, practice
                 |                                                |
@@ -57,8 +57,8 @@ before following a runbook.
 
 | Repository | Owns | Runtime and data | Start with |
 | --- | --- | --- | --- |
-| `study-projects/vartalang` | Main product frontend and two Next.js route handlers for voice-challenge submissions | Next.js 16, React 19, TypeScript, Tailwind 4; Vercel | `README.md`, `app/layout.tsx`, `lib/AuthContext.tsx`, `lib/lmsSso.ts` |
-| `study-projects/vl-backend` | Main product REST API, authentication, matching, chat, jobs, language guides, Socket.IO | Node.js ESM, Express 5, Mongoose/MongoDB, Socket.IO | `README.md`, `src/server.js`, `src/routes/`, `src/models/` |
+| `vartalang` | Main product frontend and two Next.js route handlers for voice-challenge submissions | Next.js 16, React 19, TypeScript, Tailwind 4; Vercel | `README.md`, `app/layout.tsx`, `lib/AuthContext.tsx`, `lib/lmsSso.ts` |
+| `vl-backend` | Main product REST API, authentication, matching, chat, jobs, language guides, Socket.IO | Node.js ESM, Express 5, Mongoose/MongoDB, Socket.IO | `README.md`, `src/server.js`, `src/routes/`, `src/models/` |
 | `vl-education` | Learning product frontend, course experience, instructor/admin UI, Razorpay checkout | Next.js 16, React 19, TypeScript, Tailwind 4; Vercel | `README.md`, `app/layout.tsx`, `app/lib/api.ts`, `app/lib/sso.ts` |
 | `vl-lms-backend` | LMS API, authorization, course data, enrollments, progress, payments, reports | FastAPI, SQLAlchemy, PostgreSQL, Alembic; Render | `README.md`, `app/main.py`, `app/api/v1/api.py`, `app/models/` |
 

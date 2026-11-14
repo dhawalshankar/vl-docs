@@ -2,7 +2,7 @@
 title: Main web application
 ---
 
-# Main web application: `study-projects/vartalang`
+# Main web application: `vartalang`
 
 This Next.js application is the main VartaLang product at `vartalang.in`.
 It owns browser-facing flows for accounts, profiles, matching, chat, jobs,
