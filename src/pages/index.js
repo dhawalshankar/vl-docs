@@ -22,8 +22,9 @@ export default function Home() {
               <span>Opportunity grows.</span>
             </h1>
             <p className={styles.heroDescription}>
-              Find your way around VartaLang, explore the platform, and follow
-              the guides as the documentation takes shape.
+              Explore an ecosystem for learning Indian languages and culture
+              through people, structured courses, practical resources, and
+              Sarvam AI-powered language assistance.
             </p>
             <div className={styles.heroActions}>
               <Link className={styles.primaryButton} to="/docs/intro">
@@ -86,8 +87,8 @@ export default function Home() {
               <span className={styles.cardNumber}>01 / GET STARTED</span>
               <h3>Getting started</h3>
               <p>
-                Find the planned guides for starting out and setting up a
-                VartaLang account.
+                Set up your VartaLang profile, describe your language goals, and
+                continue to the learning platform.
               </p>
               <span className={styles.cardLink}>Open getting started →</span>
             </Link>
@@ -98,8 +99,8 @@ export default function Home() {
               <span className={styles.cardNumber}>02 / USE THE PLATFORM</span>
               <h3>Explore VartaLang</h3>
               <p>
-                See the guide structure for language exchange, jobs, learning,
-                and trust and safety.
+                Learn how language exchange, jobs, courses, resources, and
+                safety features work.
               </p>
               <span className={styles.cardLink}>Browse platform guides →</span>
             </Link>
@@ -110,8 +111,8 @@ export default function Home() {
               <span className={styles.cardNumber}>03 / BUILD &amp; INTEGRATE</span>
               <h3>Developer documentation</h3>
               <p>
-                Find the planned architecture, local setup, and API reference
-                sections.
+                Understand the services, integrations, local setup, and API
+                route groups.
               </p>
               <span className={styles.cardLink}>View developer docs →</span>
             </Link>
@@ -124,13 +125,13 @@ export default function Home() {
             <h2>Built to make language a bridge.</h2>
             <p>
               VartaLang brings together language exchange, practical learning,
-              and opportunities across its platform. This documentation site
-              will grow alongside those experiences.
+              courses, and opportunity. Sarvam AI supports Indian-language
+              translation and message pronunciation in chat.
             </p>
           </div>
           <div className={styles.visionAside}>
-            The docs are being organized now. Individual guides will be filled
-            in as the next step.
+            Learn with people, study through courses and resources, and use
+            language to connect across cultures and communities.
           </div>
         </section>
 
@@ -139,8 +140,8 @@ export default function Home() {
             <p className={styles.sectionEyebrow}>Ready to explore?</p>
             <h2>Start with the VartaLang introduction.</h2>
             <p>
-              Get an overview of the documentation and the topics planned for
-              this site.
+              Get an overview of the VartaLang products, learning experiences,
+              and technical services.
             </p>
           </div>
           <Link className={styles.ctaButton} to="/docs/intro">
