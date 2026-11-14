@@ -6,8 +6,8 @@
     "node": ">=20.0"
   },
   "scripts": {
-    "start": "docusaurus start",
-    "build": "docusaurus build",
+    "start": "node scripts/build-developer-search-index.mjs && docusaurus start",
+    "build": "node scripts/build-developer-search-index.mjs && docusaurus build",
     "serve": "docusaurus serve",
     "clear": "docusaurus clear"
   },

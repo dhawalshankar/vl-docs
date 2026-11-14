@@ -88,7 +88,7 @@
 
 .accessBar {
   position: fixed;
-  z-index: 100;
+  z-index: 300;
   top: calc(var(--ifm-navbar-height, 60px) + 0.75rem);
   right: 0.75rem;
   display: flex;
@@ -117,6 +117,7 @@
 @media (max-width: 500px) {
   .accessBar {
     position: static;
+    flex-wrap: wrap;
     justify-content: center;
     border-radius: 0;
   }

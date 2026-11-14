@@ -33,6 +33,8 @@ environment to enable it. These build-time values are included in the static
 client bundle, so this only discourages casual browsing; it does not secure
 confidential content. See [`.env.example`](.env.example) for the variable names
 and placeholder format; set the actual password directly in Vercel, not in Git.
+After sign-in, a separate developer-doc search index is loaded; developer pages
+remain excluded from the public navbar search index.
 
 ## Documentation structure
 

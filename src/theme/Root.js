@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {useLocation} from '@docusaurus/router';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import DeveloperDocsSearch from '../components/DeveloperDocsSearch';
 import styles from './Root.module.css';
 
 const SESSION_KEY = 'vl-developer-docs-access-v1';
@@ -107,6 +108,7 @@ export default function Root({children}) {
     <>
       <div className={styles.accessBar}>
         <span>Developer docs unlocked for this tab</span>
+        <DeveloperDocsSearch baseUrl={siteConfig.baseUrl} />
         <button onClick={lockDeveloperDocs} type="button">
           Lock
         </button>
