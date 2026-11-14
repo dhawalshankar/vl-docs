@@ -59,5 +59,5 @@ implemented in the main platform's chat service.
 In particular, `/api/v1/practice/evaluate` currently returns a fixed
 demonstration score/feedback and does not call a speech model. Challenge
 routes can fall back to static sample challenge and leaderboard data. See the
-[learning API guide](../development/repository-learning-api.md#practice-and-challenges)
-before relying on those responses.
+[learning API guide](../development/repository-learning-api.md) before relying
+on those responses.

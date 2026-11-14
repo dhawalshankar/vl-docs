@@ -17,6 +17,12 @@ before following a runbook.
 > documentation should be access-controlled before the team adds operational
 > details that are not intended for public access.
 
+The developer-pages sign-in is a **cosmetic client-side gate** for casual
+browsing, not access control. Docusaurus embeds build-time values in the
+browser bundle, and generated static pages are not confidential. Do not put
+secrets or sensitive operational details in these pages on the strength of
+this gate.
+
 ## System map
 
 ```text

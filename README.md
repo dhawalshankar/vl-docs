@@ -25,6 +25,15 @@ npm start
 npm run build
 ```
 
+## Developer-docs gate
+
+The developer routes have a cosmetic sign-in prompt. Set
+`DEVELOPER_GATE_USERNAME` and `DEVELOPER_GATE_PASSWORD` in the Vercel build
+environment to enable it. These build-time values are included in the static
+client bundle, so this only discourages casual browsing; it does not secure
+confidential content. See [`.env.example`](.env.example) for the variable names
+and placeholder format; set the actual password directly in Vercel, not in Git.
+
 ## Documentation structure
 
 - `docs/getting-started/` — getting started and account guides

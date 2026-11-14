@@ -5,6 +5,12 @@ const config = {
   favicon: 'img/favicon.svg',
   url: 'https://docs.vartalang.in',
   baseUrl: '/',
+  customFields: {
+    developerGate: {
+      username: process.env.DEVELOPER_GATE_USERNAME || '',
+      password: process.env.DEVELOPER_GATE_PASSWORD || '',
+    },
+  },
   headTags: [
     {
       tagName: 'script',
@@ -39,6 +45,7 @@ const config = {
         indexDocs: true,
         indexPages: true,
         indexBlog: false,
+        ignoreFiles: [/^docs\/development(?:\/|$)/],
         searchBarPosition: 'right',
       },
     ],

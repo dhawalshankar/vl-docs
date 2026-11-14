@@ -1,0 +1,123 @@
+.gatePage {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at top left, rgba(232, 117, 36, 0.12), transparent 38%),
+    var(--ifm-background-color);
+  padding: 1.5rem;
+}
+
+.gateCard {
+  width: min(100%, 430px);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 1rem;
+  background: var(--ifm-background-surface-color);
+  box-shadow: 0 1.5rem 4rem rgba(20, 20, 20, 0.12);
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--ifm-color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.gateCard h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 6vw, 2.4rem);
+}
+
+.description {
+  margin: 0.75rem 0 1.5rem;
+  color: var(--ifm-color-emphasis-700);
+  line-height: 1.6;
+}
+
+.form {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.form label {
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.form input {
+  width: 100%;
+  min-height: 2.8rem;
+  border: 1px solid var(--ifm-color-emphasis-400);
+  border-radius: 0.5rem;
+  background: var(--ifm-background-color);
+  padding: 0.55rem 0.7rem;
+  color: var(--ifm-font-color-base);
+}
+
+.form input:focus {
+  border-color: var(--ifm-color-primary);
+  outline: 2px solid color-mix(in srgb, var(--ifm-color-primary) 25%, transparent);
+  outline-offset: 1px;
+}
+
+.error {
+  margin: 0.35rem 0;
+  color: var(--ifm-color-danger);
+  font-size: 0.9rem;
+}
+
+.submitButton {
+  min-height: 2.9rem;
+  margin-top: 0.75rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #c94f12;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.submitButton:hover {
+  background: #ad4010;
+}
+
+.accessBar {
+  position: fixed;
+  z-index: 100;
+  top: calc(var(--ifm-navbar-height, 60px) + 0.75rem);
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 999px;
+  background: var(--ifm-background-surface-color);
+  box-shadow: 0 0.25rem 1rem rgba(20, 20, 20, 0.12);
+  padding: 0.35rem 0.55rem 0.35rem 0.8rem;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.75rem;
+}
+
+.accessBar button {
+  border: 0;
+  border-radius: 999px;
+  background: var(--ifm-color-emphasis-200);
+  padding: 0.35rem 0.7rem;
+  color: var(--ifm-font-color-base);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+}
+
+@media (max-width: 500px) {
+  .accessBar {
+    position: static;
+    justify-content: center;
+    border-radius: 0;
+  }
+}
