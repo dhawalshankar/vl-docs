@@ -5,6 +5,24 @@ const config = {
   favicon: 'img/favicon.svg',
   url: 'https://docs.vartalang.in',
   baseUrl: '/',
+  headTags: [
+    {
+      tagName: 'script',
+      attributes: {},
+      innerHTML: `
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+      `,
+    },
+    {
+      tagName: 'script',
+      attributes: {
+        async: true,
+        src: 'https://www.googletagmanager.com/gtm.js?id=GTM-5MRP5CBH',
+      },
+    },
+  ],
 
   onBrokenLinks: 'throw',
   markdown: {
