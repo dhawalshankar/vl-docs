@@ -1,21 +1,21 @@
 import React, {useState, useEffect, useRef} from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import SarvamLogo from './SarvamLogo';
-import {loadDocsCorpus, askSarvamDocsAgent} from '../../utils/vartaAgentService';
-import {
-  speakWithSarvamTTS,
-  stopAudioPlayback,
-} from '../../utils/vartaAudioService';
+import {loadDocsCorpus, askSarvamDocsAgent, searchDocs} from '../../utils/vartaAgentService';
+import {speakWithSarvamTTS, stopAudioPlayback} from '../../utils/vartaAudioService';
 import styles from './VartaDocsAgent.module.css';
 
-const STORAGE_KEY_API_KEY = 'varta_sarvam_api_key';
-const STORAGE_KEY_MODEL = 'varta_sarvam_model';
-const STORAGE_KEY_SPEAKER = 'varta_sarvam_speaker';
+const STORAGE_KEY_SAMVAAD_KEY = 'varta_samvaad_api_key';
+const STORAGE_KEY_APP_ID = 'varta_samvaad_app_id';
 
 export default function VartaDocsAgent() {
   const {siteConfig} = useDocusaurusContext();
-  const defaultApiKey = siteConfig.customFields?.sarvamApiKey || '';
-  const defaultModel = siteConfig.customFields?.sarvamModel || 'sarvam-105b';
+  const fields = siteConfig.customFields || {};
+
+  const defaultSamvaadKey = fields.samvaadApiKey || '';
+  const defaultOrgId = fields.samvaadOrgId || '01a1fcf2-3c88-74a1-a6fd-014e7c891c50';
+  const defaultWorkspaceId = fields.samvaadWorkspaceId || '01a1fcf2-3c98-7607-b013-826e800cc576';
+  const defaultAppId = fields.samvaadAppId || 'VartaLang-D-b7f3961b-1e59';
 
   const [isOpen, setIsOpen] = useState(false);
   const [isDockVisible, setIsDockVisible] = useState(true);
@@ -27,31 +27,28 @@ export default function VartaDocsAgent() {
   const [loading, setLoading] = useState(false);
   const [corpus, setCorpus] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [apiKey, setApiKey] = useState(defaultApiKey);
-  const [model, setModel] = useState(defaultModel);
-  const [speaker, setSpeaker] = useState('meera');
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+
+  // Samvaad credentials
+  const [samvaadKey, setSamvaadKey] = useState(defaultSamvaadKey);
+  const [appId, setAppId] = useState(defaultAppId);
+  const [orgId] = useState(defaultOrgId);
+  const [workspaceId] = useState(defaultWorkspaceId);
+
+  // Audio / Speech state
+  const [audioLevel, setAudioLevel] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isListening, setIsListening] = useState(false);
 
   const messagesEndRef = useRef(null);
   const callTimerRef = useRef(null);
-  const recognitionRef = useRef(null);
-  const inCallRef = useRef(inCall);
+  const samvaadAgentRef = useRef(null);
 
-  useEffect(() => {
-    inCallRef.current = inCall;
-  }, [inCall]);
-
-  // Load saved preferences
+  // Load saved credentials from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedKey = window.localStorage.getItem(STORAGE_KEY_API_KEY);
-      if (savedKey) setApiKey(savedKey);
-      const savedModel = window.localStorage.getItem(STORAGE_KEY_MODEL);
-      if (savedModel) setModel(savedModel);
-      const savedSpeaker = window.localStorage.getItem(STORAGE_KEY_SPEAKER);
-      if (savedSpeaker) setSpeaker(savedSpeaker);
+      const savedKey = window.localStorage.getItem(STORAGE_KEY_SAMVAAD_KEY);
+      if (savedKey) setSamvaadKey(savedKey);
+      const savedAppId = window.localStorage.getItem(STORAGE_KEY_APP_ID);
+      if (savedAppId) setAppId(savedAppId);
     }
   }, []);
 
@@ -62,14 +59,24 @@ export default function VartaDocsAgent() {
       .catch((err) => console.warn('Could not load docs corpus:', err));
   }, [siteConfig.baseUrl]);
 
-  // Scroll messages to bottom
+  // Clean up Samvaad agent on unmount
+  useEffect(() => {
+    return () => {
+      if (samvaadAgentRef.current) {
+        samvaadAgentRef.current.stop().catch(() => {});
+      }
+      stopAudioPlayback();
+    };
+  }, []);
+
+  // Auto-scroll messages
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({behavior: 'smooth'});
     }
   }, [messages, loading, isSpeaking]);
 
-  // Call duration counter
+  // Call timer
   useEffect(() => {
     if (inCall) {
       setCallDuration(0);
@@ -88,118 +95,7 @@ export default function VartaDocsAgent() {
     .toString()
     .padStart(2, '0')}`;
 
-  // Speech Recognition for real-time Voice Call
-  function startListening() {
-    if (typeof window === 'undefined') return;
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      return;
-    }
-
-    try {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (e) {}
-      }
-
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-IN';
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        if (inCallRef.current) {
-          setCallStatusText(`Listening... · ${formattedCallTime}`);
-        }
-      };
-
-      recognition.onresult = (event) => {
-        const transcript = event.results?.[0]?.[0]?.transcript;
-        if (transcript && transcript.trim()) {
-          setIsListening(false);
-          handleSendMessage(transcript.trim());
-        }
-      };
-
-      recognition.onerror = (e) => {
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.start();
-      recognitionRef.current = recognition;
-    } catch (e) {
-      console.warn('Speech Recognition error:', e);
-    }
-  }
-
-  function stopListening() {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {}
-    }
-    setIsListening(false);
-  }
-
-  // Voice Call Toggle
-  function toggleCall() {
-    if (inCall) {
-      setInCall(false);
-      stopListening();
-      stopAudioPlayback();
-      setIsSpeaking(false);
-      setCallStatusText(`Call ended · ${formattedCallTime}`);
-    } else {
-      setIsOpen(true);
-      setInCall(true);
-      setCallStatusText('Connecting to Sarvam...');
-      setTimeout(() => {
-        setCallStatusText('Live Call · 0:00');
-        startListening();
-      }, 500);
-    }
-  }
-
-  // Natural audio speech handler
-  function playAgentResponseVoice(text) {
-    if (!voiceEnabled) return;
-
-    speakWithSarvamTTS({
-      text,
-      apiKey,
-      speaker: speaker || 'meera',
-      model: 'bulbul:v3',
-      onStart: () => {
-        setIsSpeaking(true);
-        if (inCallRef.current) {
-          setCallStatusText(`Sarvam speaking... · ${formattedCallTime}`);
-        }
-      },
-      onEnd: () => {
-        setIsSpeaking(false);
-        if (inCallRef.current) {
-          setCallStatusText(`Live Call · ${formattedCallTime}`);
-          // Resume microphone listening for full duplex conversation
-          setTimeout(() => {
-            if (inCallRef.current) startListening();
-          }, 400);
-        }
-      },
-      onError: () => {
-        setIsSpeaking(false);
-      },
-    });
-  }
-
-  // Handle line location navigation & highlight
+  // Handle location highlight navigation
   function navigateAndHighlight(citation) {
     if (!citation) return;
     const targetUrl = `${citation.docPath}?highlight=${encodeURIComponent(
@@ -222,6 +118,157 @@ export default function VartaDocsAgent() {
     }
   }
 
+  // Check and extract doc citations from assistant responses
+  function extractCitations(text, currentCorpus) {
+    if (!currentCorpus) return [];
+    const matches = searchDocs(currentCorpus, text, 2);
+    return matches.map((m) => ({
+      docTitle: m.docTitle,
+      heading: m.heading,
+      docPath: m.docPath,
+      anchor: m.anchor,
+      filePath: m.filePath,
+      startLine: m.startLine,
+      endLine: m.endLine,
+      targetLine: m.bestLine?.line || m.startLine,
+      quote: m.bestLine?.text || m.sentences?.[0] || m.text.slice(0, 110),
+    }));
+  }
+
+  // Start real-time Sarvam Voice Agent (Samvaad) call
+  async function startSamvaadCall() {
+    setIsOpen(true);
+    setInCall(true);
+    setCallStatusText('Connecting to Sarvam Voice...');
+
+    const activeKey = samvaadKey || fields.samvaadApiKey;
+
+    if (!activeKey || activeKey.trim() === '') {
+      // If no Samvaad key is found, prompt user to enter key
+      setCallStatusText('Live Call · 0:00');
+      const welcome = {
+        id: Date.now(),
+        sender: 'assistant',
+        text: "Namaste! I'm your Varta Docs Voice Assistant. To connect to your live Sarvam Samvaad voice agent, please enter your SAMVAAD_API_KEY in the settings (⚙️) above. You can also type any docs question right now!",
+        timestamp: '0:00',
+      };
+      setMessages((prev) => [...prev, welcome]);
+      speakWithSarvamTTS({
+        text: welcome.text,
+        onStart: () => setIsSpeaking(true),
+        onEnd: () => setIsSpeaking(false),
+      });
+      return;
+    }
+
+    try {
+      // Dynamically import sarvam-conv-ai-sdk browser module
+      const {ConversationAgent, BrowserAudioInterface, InteractionType} =
+        await import('sarvam-conv-ai-sdk/browser');
+
+      const audioInterface = new BrowserAudioInterface(16000, {
+        outputLevelCallback: (level) => {
+          setAudioLevel(Math.min(100, Math.round(level * 100)));
+        },
+      });
+
+      const agent = new ConversationAgent({
+        apiKey: activeKey.trim(),
+        config: {
+          org_id: orgId,
+          workspace_id: workspaceId,
+          app_id: appId,
+          user_identifier: `vl-visitor-${Date.now()}`,
+          user_identifier_type: 'custom',
+          interaction_type: InteractionType.CALL,
+          input_sample_rate: 16000,
+          output_sample_rate: 16000,
+        },
+        audioInterface,
+        stateCallback: (newState) => {
+          if (newState === 'CONNECTED') {
+            setCallStatusText(`Live Call · ${formattedCallTime}`);
+          }
+        },
+        transcriptCallback: async (msg) => {
+          const role = msg.role === 'user' ? 'user' : 'assistant';
+          const content = msg.content || '';
+          const activeCorpus = corpus || (await loadDocsCorpus(siteConfig.baseUrl));
+
+          let citations = [];
+          if (role === 'assistant') {
+            citations = extractCitations(content, activeCorpus);
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now() + Math.random(),
+              sender: role,
+              text: content,
+              citations,
+              timestamp: formattedCallTime,
+            },
+          ]);
+
+          // Auto-highlight if user asked where something is located
+          if (
+            role === 'assistant' &&
+            citations.length > 0 &&
+            content.toLowerCase().includes('located')
+          ) {
+            setTimeout(() => navigateAndHighlight(citations[0]), 800);
+          }
+        },
+        endCallback: async () => {
+          samvaadAgentRef.current = null;
+          setInCall(false);
+          setIsSpeaking(false);
+          setCallStatusText(`Call ended · ${formattedCallTime}`);
+        },
+      });
+
+      samvaadAgentRef.current = agent;
+      await agent.start();
+      setCallStatusText('Live Call · 0:00');
+    } catch (err) {
+      console.warn('Samvaad connection error:', err);
+      setCallStatusText('Connection failed');
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          sender: 'assistant',
+          text: `Could not connect to Sarvam Voice Agents: ${err.message}. Please check your SAMVAAD_API_KEY in settings.`,
+          timestamp: '0:00',
+        },
+      ]);
+    }
+  }
+
+  // End real-time call
+  async function endSamvaadCall() {
+    setInCall(false);
+    setIsSpeaking(false);
+    stopAudioPlayback();
+    if (samvaadAgentRef.current) {
+      try {
+        await samvaadAgentRef.current.stop();
+      } catch (e) {}
+      samvaadAgentRef.current = null;
+    }
+    setCallStatusText(`Call ended · ${formattedCallTime}`);
+  }
+
+  function toggleCall() {
+    if (inCall) {
+      endSamvaadCall();
+    } else {
+      startSamvaadCall();
+    }
+  }
+
+  // Text chat submission
   async function handleSendMessage(queryText) {
     const query = (queryText || inputValue).trim();
     if (!query) return;
@@ -246,8 +293,7 @@ export default function VartaDocsAgent() {
 
       const result = await askSarvamDocsAgent({
         query,
-        apiKey,
-        model,
+        apiKey: samvaadKey || fields.samvaadApiKey,
         corpus: activeCorpus,
         history: historyForAgent,
       });
@@ -261,27 +307,34 @@ export default function VartaDocsAgent() {
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
-      playAgentResponseVoice(result.answer);
 
-      // Automatic jump & highlight when user asks "where" or "highlight"
+      // Speak using Sarvam Bulbul TTS
+      speakWithSarvamTTS({
+        text: result.answer,
+        apiKey: samvaadKey || fields.samvaadApiKey,
+        onStart: () => setIsSpeaking(true),
+        onEnd: () => setIsSpeaking(false),
+      });
+
+      // Jump & highlight if "where" or "highlight" requested
       const lowerQ = query.toLowerCase();
       if (
         (lowerQ.includes('where') || lowerQ.includes('highlight') || lowerQ.includes('locate')) &&
         result.citations &&
         result.citations.length > 0
       ) {
-        setTimeout(() => {
-          navigateAndHighlight(result.citations[0]);
-        }, 1000);
+        setTimeout(() => navigateAndHighlight(result.citations[0]), 900);
       }
     } catch (err) {
-      const errorMsg = {
-        id: Date.now() + 1,
-        sender: 'assistant',
-        text: `Error connecting to Sarvam Docs Assistant: ${err.message}.`,
-        timestamp: formattedCallTime,
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: 'assistant',
+          text: `Error: ${err.message}`,
+          timestamp: formattedCallTime,
+        },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -298,9 +351,8 @@ export default function VartaDocsAgent() {
   function saveSettings(e) {
     e.preventDefault();
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STORAGE_KEY_API_KEY, apiKey);
-      window.localStorage.setItem(STORAGE_KEY_MODEL, model);
-      window.localStorage.setItem(STORAGE_KEY_SPEAKER, speaker);
+      window.localStorage.setItem(STORAGE_KEY_SAMVAAD_KEY, samvaadKey);
+      window.localStorage.setItem(STORAGE_KEY_APP_ID, appId);
     }
     setShowSettings(false);
   }
@@ -341,7 +393,7 @@ export default function VartaDocsAgent() {
               <button
                 className={styles.iconBtn}
                 onClick={() => setShowSettings(!showSettings)}
-                title="Sarvam AI & Voice Settings"
+                title="Sarvam Voice Agent Settings"
               >
                 ⚙️
               </button>
@@ -365,7 +417,7 @@ export default function VartaDocsAgent() {
                 className={styles.iconBtn}
                 onClick={() => {
                   setIsOpen(false);
-                  if (inCall) toggleCall();
+                  if (inCall) endSamvaadCall();
                 }}
                 title="Close"
               >
@@ -377,37 +429,20 @@ export default function VartaDocsAgent() {
           {/* Settings Drawer */}
           {showSettings && (
             <form className={styles.settingsPanel} onSubmit={saveSettings}>
-              <h4>Sarvam Voice & Model Settings</h4>
-              <label>Sarvam Subscription Key</label>
+              <h4>Sarvam Samvaad Settings</h4>
+              <label>SAMVAAD_API_KEY</label>
               <input
                 type="password"
-                placeholder="Enter Sarvam API Key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Paste your SAMVAAD_API_KEY"
+                value={samvaadKey}
+                onChange={(e) => setSamvaadKey(e.target.value)}
               />
-              <label>Voice Persona (Bulbul TTS)</label>
-              <select value={speaker} onChange={(e) => setSpeaker(e.target.value)}>
-                <option value="meera">Meera (Natural Indian Female Voice)</option>
-                <option value="ishita_enhi_companion">Ishita (Conversational)</option>
-                <option value="shubh">Shubh (Natural Indian Male Voice)</option>
-                <option value="aditya">Aditya (Male Voice)</option>
-              </select>
-              <label>Chat Model</label>
-              <select value={model} onChange={(e) => setModel(e.target.value)}>
-                <option value="sarvam-105b">sarvam-105b (Reasoning & Code)</option>
-                <option value="sarvam-105b-conversations">sarvam-105b-conversations</option>
-                <option value="sarvam-2b">sarvam-2b (Fast)</option>
-              </select>
-              <div className={styles.checkboxRow}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={voiceEnabled}
-                    onChange={(e) => setVoiceEnabled(e.target.checked)}
-                  />
-                  Enable Natural Voice Output
-                </label>
-              </div>
+              <label>Agent ID (app_id)</label>
+              <input
+                type="text"
+                value={appId}
+                onChange={(e) => setAppId(e.target.value)}
+              />
               <div className={styles.settingsButtons}>
                 <button type="submit" className={styles.primaryBtn}>
                   Save Settings
@@ -429,8 +464,11 @@ export default function VartaDocsAgent() {
               <div className={styles.emptyState}>
                 <div
                   className={`${styles.waveIcon} ${
-                    isSpeaking || isListening ? styles.waveActive : ''
+                    inCall || isSpeaking ? styles.waveActive : ''
                   }`}
+                  style={{
+                    transform: audioLevel > 5 ? `scaleY(${1 + audioLevel / 60})` : 'none',
+                  }}
                 >
                   <span></span>
                   <span></span>
@@ -448,7 +486,7 @@ export default function VartaDocsAgent() {
                       handleSendMessage('Where is Sarvam AI located in my docs? Highlight the line.')
                     }
                   >
-                    📍 Where is Sarvam AI located in docs? Highlight line
+                    📍 Where is Sarvam AI located? Highlight the line
                   </button>
                   <button
                     onClick={() =>
@@ -476,18 +514,9 @@ export default function VartaDocsAgent() {
                     }
                   >
                     {msg.sender === 'assistant' && (
-                      <div className={styles.senderHeader}>
-                        <span className={styles.senderLabel}>
-                          Sarvam · {msg.timestamp || '0:00'}
-                        </span>
-                        <button
-                          className={styles.replayVoiceBtn}
-                          onClick={() => playAgentResponseVoice(msg.text)}
-                          title="Play Sarvam Voice"
-                        >
-                          🔊
-                        </button>
-                      </div>
+                      <span className={styles.senderLabel}>
+                        Sarvam · {msg.timestamp || '0:00'}
+                      </span>
                     )}
                     <div
                       className={
@@ -498,7 +527,7 @@ export default function VartaDocsAgent() {
                     >
                       <div className={styles.bubbleText}>{msg.text}</div>
 
-                      {/* Highlight & Location card */}
+                      {/* Line location & highlight card */}
                       {msg.citations && msg.citations.length > 0 && (
                         <div className={styles.citationsContainer}>
                           {msg.citations.map((c, idx) => (
@@ -544,7 +573,7 @@ export default function VartaDocsAgent() {
             )}
           </div>
 
-          {/* Bottom Controls */}
+          {/* Bottom Bar Controls */}
           <div className={styles.bottomBar}>
             <div className={styles.inputRow}>
               <input
@@ -556,13 +585,6 @@ export default function VartaDocsAgent() {
                   if (e.key === 'Enter') handleSendMessage();
                 }}
               />
-              <button
-                className={`${styles.micBtn} ${isListening ? styles.micActive : ''}`}
-                onClick={startListening}
-                title="Speak question"
-              >
-                🎤
-              </button>
               <button
                 className={styles.sendBtn}
                 onClick={() => handleSendMessage()}

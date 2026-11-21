@@ -13,6 +13,10 @@ const config = {
     sarvamApiKey: process.env.SARVAM_API_KEY || '',
     sarvamModel: process.env.SARVAM_MODEL || 'sarvam-105b',
     sarvamVoiceAgentScript: process.env.SARVAM_VOICE_AGENT_SCRIPT || '',
+    samvaadApiKey: process.env.SAMVAAD_API_KEY || process.env.SARVAM_API_KEY || '',
+    samvaadOrgId: process.env.SAMVAAD_ORG_ID || '01a1fcf2-3c88-74a1-a6fd-014e7c891c50',
+    samvaadWorkspaceId: process.env.SAMVAAD_WORKSPACE_ID || '01a1fcf2-3c98-7607-b013-826e800cc576',
+    samvaadAppId: process.env.SAMVAAD_APP_ID || 'VartaLang-D-b7f3961b-1e59',
   },
   headTags: [
     {
