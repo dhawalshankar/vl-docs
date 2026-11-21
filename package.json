@@ -6,8 +6,10 @@
     "node": ">=20.0"
   },
   "scripts": {
-    "start": "node scripts/build-developer-search-index.mjs && docusaurus start",
-    "build": "node scripts/build-developer-search-index.mjs && docusaurus build",
+    "start": "node scripts/build-docs-agent-index.mjs && node scripts/build-developer-search-index.mjs && docusaurus start",
+    "build": "node scripts/build-docs-agent-index.mjs && node scripts/build-developer-search-index.mjs && docusaurus build",
+    "index:agent": "node scripts/build-docs-agent-index.mjs",
+    "agent": "node scripts/varta-agent-cli.mjs",
     "serve": "docusaurus serve",
     "clear": "docusaurus clear"
   },

@@ -10,6 +10,8 @@ const config = {
       username: process.env.DEVELOPER_GATE_USERNAME || '',
       password: process.env.DEVELOPER_GATE_PASSWORD || '',
     },
+    sarvamApiKey: process.env.SARVAM_API_KEY || '',
+    sarvamModel: process.env.SARVAM_MODEL || 'sarvam-105b',
   },
   headTags: [
     {

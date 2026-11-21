@@ -2,6 +2,8 @@ import React, {useEffect, useState} from 'react';
 import {useLocation} from '@docusaurus/router';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import DeveloperDocsSearch from '../components/DeveloperDocsSearch';
+import VartaDocsAgent from '../components/VartaDocsAgent/VartaDocsAgent';
+import VartaDocHighlighter from '../components/VartaDocHighlighter/VartaDocHighlighter';
 import styles from './Root.module.css';
 
 const SESSION_KEY = 'vl-developer-docs-access-v1';
@@ -27,93 +29,103 @@ export default function Root({children}) {
     setSessionChecked(true);
   }, [isProtectedPath]);
 
-  if (!isProtectedPath) {
-    return children;
-  }
-
-  if (!sessionChecked) {
-    return (
-      <main className={styles.gatePage}>
-        <p>Checking developer-doc access...</p>
-      </main>
-    );
-  }
-
-  if (!unlocked) {
-    function handleSubmit(event) {
-      event.preventDefault();
-      setError('');
-
-      if (!gate.username || !gate.password) {
-        setError('The developer-doc gate is not configured for this build.');
-        return;
-      }
-
-      if (username.trim() !== gate.username || password !== gate.password) {
-        setError('The username or password is incorrect.');
-        return;
-      }
-
-      window.sessionStorage.setItem(SESSION_KEY, 'granted');
-      setPassword('');
-      setUnlocked(true);
-    }
-
-    return (
-      <main className={styles.gatePage}>
-        <section className={styles.gateCard} aria-labelledby="gate-title">
-          <p className={styles.eyebrow}>VartaLang developer docs</p>
-          <h1 id="gate-title">Sign in to continue</h1>
-          <p className={styles.description}>
-            Enter your developer-doc username and password.
-          </p>
-          <form className={styles.form} onSubmit={handleSubmit}>
-            <label htmlFor="developer-username">Username</label>
-            <input
-              autoComplete="username"
-              id="developer-username"
-              onChange={(event) => setUsername(event.target.value)}
-              required
-              value={username}
-            />
-            <label htmlFor="developer-password">Password</label>
-            <input
-              autoComplete="current-password"
-              id="developer-password"
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              type="password"
-              value={password}
-            />
-            {error && (
-              <p className={styles.error} role="alert">
-                {error}
-              </p>
-            )}
-            <button className={styles.submitButton} type="submit">
-              Sign in
-            </button>
-          </form>
-        </section>
-      </main>
-    );
-  }
-
   function lockDeveloperDocs() {
     window.sessionStorage.removeItem(SESSION_KEY);
     setUnlocked(false);
   }
 
+  function renderInnerContent() {
+    if (!isProtectedPath) {
+      return children;
+    }
+
+    if (!sessionChecked) {
+      return (
+        <main className={styles.gatePage}>
+          <p>Checking developer-doc access...</p>
+        </main>
+      );
+    }
+
+    if (!unlocked) {
+      function handleSubmit(event) {
+        event.preventDefault();
+        setError('');
+
+        if (!gate.username || !gate.password) {
+          setError('The developer-doc gate is not configured for this build.');
+          return;
+        }
+
+        if (username.trim() !== gate.username || password !== gate.password) {
+          setError('The username or password is incorrect.');
+          return;
+        }
+
+        window.sessionStorage.setItem(SESSION_KEY, 'granted');
+        setPassword('');
+        setUnlocked(true);
+      }
+
+      return (
+        <main className={styles.gatePage}>
+          <section className={styles.gateCard} aria-labelledby="gate-title">
+            <p className={styles.eyebrow}>VartaLang developer docs</p>
+            <h1 id="gate-title">Sign in to continue</h1>
+            <p className={styles.description}>
+              Enter your developer-doc username and password.
+            </p>
+            <form className={styles.form} onSubmit={handleSubmit}>
+              <label htmlFor="developer-username">Username</label>
+              <input
+                autoComplete="username"
+                id="developer-username"
+                onChange={(event) => setUsername(event.target.value)}
+                required
+                value={username}
+              />
+              <label htmlFor="developer-password">Password</label>
+              <input
+                autoComplete="current-password"
+                id="developer-password"
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                type="password"
+                value={password}
+              />
+              {error && (
+                <p className={styles.error} role="alert">
+                  {error}
+                </p>
+              )}
+              <button className={styles.submitButton} type="submit">
+                Sign in
+              </button>
+            </form>
+          </section>
+        </main>
+      );
+    }
+
+    return (
+      <>
+        <div className={styles.accessBar}>
+          <span>Developer docs unlocked for this tab</span>
+          <DeveloperDocsSearch baseUrl={siteConfig.baseUrl} />
+          <button onClick={lockDeveloperDocs} type="button">
+            Lock
+          </button>
+        </div>
+        {children}
+      </>
+    );
+  }
+
   return (
     <>
-      <div className={styles.accessBar}>
-        <span>Developer docs unlocked for this tab</span>
-        <DeveloperDocsSearch baseUrl={siteConfig.baseUrl} />
-        <button onClick={lockDeveloperDocs} type="button">
-          Lock
-        </button>
-      </div>
-      {children}
+      <VartaDocHighlighter />
+      {renderInnerContent()}
+      <VartaDocsAgent />
     </>
   );
 }

@@ -43,3 +43,26 @@ remain excluded from the public navbar search index.
 - `docs/architecture/` — applications, APIs, integrations, and SSO
 - `docs/development/` — team onboarding, repository internals, data models,
   API inventory, local setup, operations, and contribution guidance
+
+## Varta Docs Agent (Powered by Sarvam AI)
+
+The documentation features a **Docs Assistant** widget (styled identically to Sarvam AI's Docs Assistant) that answers questions from the documentation and pinpoints exact locations.
+
+### Key Capabilities:
+- **Exact Line Location & Highlighting**: When you ask *"where is it located in my docs?"* or click any citation card in the chat, it navigates directly to that document, smoothly scrolls to the exact section/sentence, and highlights the target line with an animated beacon glow (`?highlight=...&line=...`).
+- **Voice & Call Mode**: Supports `"Begin Call"` with live audio wave animations, speech recognition, and Indian English/Hindi voice synthesis (`window.speechSynthesis`), or typing via text input.
+- **Sarvam AI Integration**: Powered by Sarvam AI Chat Completion API (`sarvam-105b`, `sarvam-105b-conversations`, or `sarvam-2b`).
+- **Zero-Config Fallback**: Works immediately with offline line extraction even before an API key is provided.
+
+### Configuration:
+1. In the browser: Click the ⚙️ settings icon in the Docs Assistant header and paste your `SARVAM_API_KEY`.
+2. Via environment variables: Add `SARVAM_API_KEY=your_key` in `.env` or Vercel environment variables.
+
+### Terminal CLI:
+You can also ask questions from the terminal:
+
+```bash
+npm run agent "Where is Sarvam AI integrated?"
+npm run agent "Where are the API endpoints documented?"
+```
+
