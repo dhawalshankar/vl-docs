@@ -1,8 +1,8 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import {useHistory, useLocation} from '@docusaurus/router';
 import SarvamLogo from './SarvamLogo';
-import {loadDocsCorpus, askSarvamDocsAgent, searchDocs} from '../../utils/vartaAgentService';
+import {loadDocsCorpus, searchDocs} from '../../utils/vartaAgentService';
 import {speakWithSarvamTTS, stopAudioPlayback} from '../../utils/vartaAudioService';
 import styles from './VartaDocsAgent.module.css';
 
@@ -10,175 +10,117 @@ const STORAGE_KEY_SAMVAAD_KEY = 'varta_samvaad_api_key';
 const STORAGE_KEY_APP_ID = 'varta_samvaad_app_id';
 
 export default function VartaDocsAgent() {
+  const {siteConfig} = useDocusaurusContext();
   const history = useHistory();
   const location = useLocation();
-  const {siteConfig} = useDocusaurusContext();
   const fields = siteConfig.customFields || {};
-
-  const defaultSamvaadKey = fields.samvaadApiKey || '';
-  const defaultOrgId = fields.samvaadOrgId || '01a1fcf2-3c88-74a1-a6fd-014e7c891c50';
-  const defaultWorkspaceId = fields.samvaadWorkspaceId || '01a1fcf2-3c98-7607-b013-826e800cc576';
-  const defaultAppId = fields.samvaadAppId || 'VartaLang-D-b7f3961b-1e59';
-
   const [isOpen, setIsOpen] = useState(false);
   const [isDockVisible, setIsDockVisible] = useState(true);
   const [inCall, setInCall] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [callStatusText, setCallStatusText] = useState('Call ended · 0:00');
   const [messages, setMessages] = useState([]);
-  const [inputValue, setInputValue] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [corpus, setCorpus] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
-
-  // Samvaad credentials
-  const [samvaadKey, setSamvaadKey] = useState(defaultSamvaadKey);
-  const [appId, setAppId] = useState(defaultAppId);
-  const [orgId] = useState(defaultOrgId);
-  const [workspaceId] = useState(defaultWorkspaceId);
-
-  // Audio / Speech state
+  const [samvaadKey, setSamvaadKey] = useState(fields.samvaadApiKey || '');
+  const [appId, setAppId] = useState(fields.samvaadAppId || 'VartaLang-D-b7f3961b-1e59');
   const [audioLevel, setAudioLevel] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
-
+  const [corpus, setCorpus] = useState(null);
   const messagesEndRef = useRef(null);
   const callTimerRef = useRef(null);
   const samvaadAgentRef = useRef(null);
+  const orgId = fields.samvaadOrgId || '01a1fcf2-3c88-74a1-a6fd-014e7c891c50';
+  const workspaceId = fields.samvaadWorkspaceId || '01a1fcf2-3c98-7607-b013-826e800cc576';
 
-  // Load saved credentials
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedKey = window.localStorage.getItem(STORAGE_KEY_SAMVAAD_KEY);
-      if (savedKey) setSamvaadKey(savedKey);
-      const savedAppId = window.localStorage.getItem(STORAGE_KEY_APP_ID);
-      if (savedAppId) setAppId(savedAppId);
-    }
+    const savedKey = window.localStorage.getItem(STORAGE_KEY_SAMVAAD_KEY);
+    const savedAppId = window.localStorage.getItem(STORAGE_KEY_APP_ID);
+    if (savedKey) setSamvaadKey(savedKey);
+    if (savedAppId) setAppId(savedAppId);
   }, []);
 
-  // Preload docs corpus
   useEffect(() => {
     loadDocsCorpus(siteConfig.baseUrl)
-      .then((data) => setCorpus(data))
-      .catch((err) => console.warn('Could not load docs corpus:', err));
+      .then(setCorpus)
+      .catch((error) => console.warn('Could not load docs index:', error));
   }, [siteConfig.baseUrl]);
 
-  // Clean up Samvaad agent on unmount
-  useEffect(() => {
-    return () => {
-      if (samvaadAgentRef.current) {
-        samvaadAgentRef.current.stop().catch(() => {});
-      }
-      stopAudioPlayback();
-    };
+  useEffect(() => () => {
+    if (samvaadAgentRef.current) samvaadAgentRef.current.stop().catch(() => {});
+    stopAudioPlayback();
+    if (callTimerRef.current) clearInterval(callTimerRef.current);
   }, []);
 
-  // Auto-scroll messages
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({behavior: 'smooth'});
-    }
-  }, [messages, loading, isSpeaking]);
+    messagesEndRef.current?.scrollIntoView({behavior: 'smooth'});
+  }, [messages]);
 
-  // Call timer
   useEffect(() => {
     if (inCall) {
       setCallDuration(0);
-      callTimerRef.current = setInterval(() => {
-        setCallDuration((prev) => prev + 1);
-      }, 1000);
-    } else {
-      if (callTimerRef.current) clearInterval(callTimerRef.current);
+      callTimerRef.current = setInterval(() => setCallDuration((value) => value + 1), 1000);
+    } else if (callTimerRef.current) {
+      clearInterval(callTimerRef.current);
     }
-    return () => {
-      if (callTimerRef.current) clearInterval(callTimerRef.current);
-    };
+    return () => clearInterval(callTimerRef.current);
   }, [inCall]);
 
-  const formattedCallTime = `${Math.floor(callDuration / 60)}:${(callDuration % 60)
-    .toString()
-    .padStart(2, '0')}`;
+  const formattedCallTime = `${Math.floor(callDuration / 60)}:${String(callDuration % 60).padStart(2, '0')}`;
 
-  /**
-   * Autonomously browse to document and scroll to highlighted line
-   */
   function autonomouslyBrowseTo(citation) {
     if (!citation) return;
-    const targetPath = citation.docPath;
-    const targetUrl = `${targetPath}?highlight=${encodeURIComponent(
-      citation.quote || ''
-    )}&line=${citation.targetLine || citation.startLine}${citation.anchor || ''}`;
-
-    // 1. Navigate page autonomously
-    if (location.pathname !== targetPath) {
-      history.push(targetUrl);
-    } else {
-      window.history.pushState(null, '', targetUrl);
-    }
-
-    // 2. Trigger autonomous in-page scroll & pulse
-    window.dispatchEvent(
-      new CustomEvent('varta:highlight', {
-        detail: {
-          text: citation.quote,
-          line: citation.targetLine || citation.startLine,
-          filePath: citation.filePath,
-        },
-      })
-    );
-  }
-
-  // Extract docs citations from answer text
-  function extractCitations(text, currentCorpus) {
-    if (!currentCorpus) return [];
-    const matches = searchDocs(currentCorpus, text, 2);
-    return matches.map((m) => ({
-      docTitle: m.docTitle,
-      heading: m.heading,
-      docPath: m.docPath,
-      anchor: m.anchor,
-      filePath: m.filePath,
-      startLine: m.startLine,
-      endLine: m.endLine,
-      targetLine: m.bestLine?.line || m.startLine,
-      quote: m.bestLine?.text || m.sentences?.[0] || m.text.slice(0, 110),
+    const targetUrl = `${citation.docPath}?highlight=${encodeURIComponent(citation.quote || '')}&line=${citation.targetLine || citation.startLine}${citation.anchor || ''}`;
+    if (location.pathname !== citation.docPath) history.push(targetUrl);
+    else window.history.pushState(null, '', targetUrl);
+    window.dispatchEvent(new CustomEvent('varta:highlight', {
+      detail: {
+        text: citation.quote,
+        line: citation.targetLine || citation.startLine,
+        filePath: citation.filePath,
+      },
     }));
   }
 
-  // Start real-time Sarvam Voice Agent (Samvaad) call
+  async function browseFromTranscript(text) {
+    try {
+      const activeCorpus = corpus || await loadDocsCorpus(siteConfig.baseUrl);
+      if (!corpus) setCorpus(activeCorpus);
+      const match = searchDocs(activeCorpus, text, 1)[0];
+      if (!match) return;
+      setTimeout(() => autonomouslyBrowseTo({
+        docPath: match.docPath,
+        anchor: match.anchor,
+        filePath: match.filePath,
+        startLine: match.startLine,
+        targetLine: match.bestLine?.line || match.startLine,
+        quote: match.bestLine?.text || match.sentences?.[0] || match.text.slice(0, 110),
+      }), 500);
+    } catch (error) {
+      console.warn('Could not find a matching docs passage:', error);
+    }
+  }
+
   async function startSamvaadCall() {
     setIsOpen(true);
     setInCall(true);
-    setCallStatusText('Connecting to Sarvam Voice...');
-
+    setCallStatusText('Connecting to Sarvam Samvaad...');
     const activeKey = samvaadKey || fields.samvaadApiKey;
 
-    if (!activeKey || activeKey.trim() === '') {
-      setCallStatusText('Live Call · 0:00');
-      const welcome = {
-        id: Date.now(),
-        sender: 'assistant',
-        text: "Namaste! I'm your Varta Docs Voice Assistant. To connect to your live Sarvam Samvaad voice agent, please enter your SAMVAAD_API_KEY in the settings (⚙️) above. You can also type or speak any docs question right now, and I will autonomously browse to the answer!",
-        timestamp: '0:00',
-      };
-      setMessages((prev) => [...prev, welcome]);
-      speakWithSarvamTTS({
-        text: welcome.text,
-        onStart: () => setIsSpeaking(true),
-        onEnd: () => setIsSpeaking(false),
-      });
+    if (!activeKey?.trim()) {
+      setInCall(false);
+      setCallStatusText('API key required');
+      const text = 'Add your SAMVAAD_API_KEY in settings to start a live Samvaad voice call.';
+      setMessages((previous) => [...previous, {id: Date.now(), sender: 'assistant', text, timestamp: '0:00'}]);
+      speakWithSarvamTTS({text, onStart: () => setIsSpeaking(true), onEnd: () => setIsSpeaking(false)});
       return;
     }
 
     try {
       const {ConversationAgent, BrowserAudioInterface, InteractionType} =
         await import('sarvam-conv-ai-sdk/browser');
-
       const audioInterface = new BrowserAudioInterface(16000, {
-        outputLevelCallback: (level) => {
-          setAudioLevel(Math.min(100, Math.round(level * 100)));
-        },
+        outputLevelCallback: (level) => setAudioLevel(Math.min(100, Math.round(level * 100))),
       });
-
       const agent = new ConversationAgent({
         apiKey: activeKey.trim(),
         config: {
@@ -192,66 +134,42 @@ export default function VartaDocsAgent() {
           output_sample_rate: 16000,
         },
         audioInterface,
-        stateCallback: (newState) => {
-          if (newState === 'CONNECTED') {
-            setCallStatusText(`Live Call · ${formattedCallTime}`);
-          }
+        stateCallback: (state) => {
+          if (state === 'CONNECTED') setCallStatusText(`Live Call · ${formattedCallTime}`);
         },
-        transcriptCallback: async (msg) => {
-          const role = msg.role === 'user' ? 'user' : 'assistant';
-          const content = msg.content || '';
-          const activeCorpus = corpus || (await loadDocsCorpus(siteConfig.baseUrl));
-
-          let citations = [];
-          if (role === 'assistant') {
-            citations = extractCitations(content, activeCorpus);
-          }
-
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: Date.now() + Math.random(),
-              sender: role,
-              text: content,
-              citations,
-              timestamp: formattedCallTime,
-            },
-          ]);
-
-          // Autonomously browse to the page and scroll to highlighted line!
-          if (role === 'assistant' && citations.length > 0) {
-            setTimeout(() => {
-              autonomouslyBrowseTo(citations[0]);
-            }, 600);
-          }
+        transcriptCallback: (message) => {
+          const role = message.role === 'user' ? 'user' : 'assistant';
+          const transcriptText = message.content || '';
+          setMessages((previous) => [...previous, {
+            id: Date.now() + Math.random(),
+            sender: role,
+            text: transcriptText,
+            timestamp: formattedCallTime,
+          }]);
+          if (role === 'assistant' && transcriptText.trim()) browseFromTranscript(transcriptText);
         },
-        endCallback: async () => {
+        endCallback: () => {
           samvaadAgentRef.current = null;
           setInCall(false);
           setIsSpeaking(false);
           setCallStatusText(`Call ended · ${formattedCallTime}`);
         },
       });
-
       samvaadAgentRef.current = agent;
       await agent.start();
-      setCallStatusText('Live Call · 0:00');
-    } catch (err) {
-      console.warn('Samvaad connection error:', err);
+      setCallStatusText(`Live Call · ${formattedCallTime}`);
+    } catch (error) {
+      console.warn('Samvaad connection error:', error);
+      setInCall(false);
       setCallStatusText('Connection failed');
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          sender: 'assistant',
-          text: `Could not connect to Sarvam Voice Agents: ${err.message}. Please check your SAMVAAD_API_KEY in settings.`,
-          timestamp: '0:00',
-        },
-      ]);
+      setMessages((previous) => [...previous, {
+        id: Date.now(), sender: 'assistant',
+        text: `Could not connect to Sarvam Samvaad: ${error.message}. Check the API key in settings.`,
+        timestamp: '0:00',
+      }]);
     }
   }
 
-  // End real-time call
   async function endSamvaadCall() {
     setInCall(false);
     setIsSpeaking(false);
@@ -259,369 +177,94 @@ export default function VartaDocsAgent() {
     if (samvaadAgentRef.current) {
       try {
         await samvaadAgentRef.current.stop();
-      } catch (e) {}
+      } catch (error) {
+        console.warn('Could not stop Samvaad call:', error);
+      }
       samvaadAgentRef.current = null;
     }
     setCallStatusText(`Call ended · ${formattedCallTime}`);
   }
 
   function toggleCall() {
-    if (inCall) {
-      endSamvaadCall();
-    } else {
-      startSamvaadCall();
-    }
+    if (inCall) endSamvaadCall();
+    else startSamvaadCall();
   }
 
-  // Text chat submission with autonomous browsing
-  async function handleSendMessage(queryText) {
-    const query = (queryText || inputValue).trim();
-    if (!query) return;
-
-    setInputValue('');
-    const userMsg = {
-      id: Date.now(),
-      sender: 'user',
-      text: query,
-      timestamp: formattedCallTime,
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-    setLoading(true);
-
-    try {
-      const activeCorpus = corpus || (await loadDocsCorpus(siteConfig.baseUrl));
-      const historyForAgent = messages.slice(-4).map((m) => ({
-        role: m.sender === 'user' ? 'user' : 'assistant',
-        content: m.text,
-      }));
-
-      const result = await askSarvamDocsAgent({
-        query,
-        apiKey: samvaadKey || fields.samvaadApiKey,
-        corpus: activeCorpus,
-        history: historyForAgent,
-      });
-
-      const assistantMsg = {
-        id: Date.now() + 1,
-        sender: 'assistant',
-        text: result.answer,
-        citations: result.citations || [],
-        timestamp: formattedCallTime,
-      };
-
-      setMessages((prev) => [...prev, assistantMsg]);
-
-      // Speak answer naturally
-      speakWithSarvamTTS({
-        text: result.answer,
-        apiKey: samvaadKey || fields.samvaadApiKey,
-        onStart: () => setIsSpeaking(true),
-        onEnd: () => setIsSpeaking(false),
-      });
-
-      // Autonomously browse to the page, scroll to line, and highlight!
-      if (result.citations && result.citations.length > 0) {
-        setTimeout(() => {
-          autonomouslyBrowseTo(result.citations[0]);
-        }, 500);
-      }
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: 'assistant',
-          text: `Error: ${err.message}`,
-          timestamp: formattedCallTime,
-        },
-      ]);
-    } finally {
-      setLoading(false);
-    }
+  function saveSettings(event) {
+    event.preventDefault();
+    window.localStorage.setItem(STORAGE_KEY_SAMVAAD_KEY, samvaadKey);
+    window.localStorage.setItem(STORAGE_KEY_APP_ID, appId);
+    setShowSettings(false);
   }
 
   function copyTranscript() {
     const transcript = messages
-      .map((m) => `${m.sender === 'user' ? 'User' : 'Sarvam'} (${m.timestamp}): ${m.text}`)
+      .map((message) => `${message.sender === 'user' ? 'User' : 'Samvaad'} (${message.timestamp}): ${message.text}`)
       .join('\n\n');
     navigator.clipboard.writeText(transcript);
-    alert('Conversation transcript copied to clipboard!');
-  }
-
-  function saveSettings(e) {
-    e.preventDefault();
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STORAGE_KEY_SAMVAAD_KEY, samvaadKey);
-      window.localStorage.setItem(STORAGE_KEY_APP_ID, appId);
-    }
-    setShowSettings(false);
   }
 
   if (!isDockVisible) {
-    return (
-      <button
-        className={styles.reopenButton}
-        onClick={() => setIsDockVisible(true)}
-        title="Open Docs Assistant"
-      >
-        <SarvamLogo size={22} />
-        <span>Docs Assistant</span>
-      </button>
-    );
+    return <button className={styles.reopenButton} onClick={() => setIsDockVisible(true)} title="Open Samvaad assistant">
+      <SarvamLogo size={22} /><span>Samvaad</span>
+    </button>;
   }
 
-  return (
-    <div className={styles.container}>
-      {/* Expanded Modal Window */}
-      {isOpen && (
-        <div className={styles.modalWindow} role="dialog" aria-label="Docs Assistant">
-          {/* Header */}
-          <div className={styles.header}>
-            <div className={styles.headerTitleGroup}>
-              <div className={styles.logoWrapper}>
-                <SarvamLogo size={26} />
-              </div>
-              <div>
-                <h3 className={styles.title}>Docs Assistant</h3>
-                <p className={styles.subtitle}>
-                  {inCall ? `Live Call · ${formattedCallTime}` : callStatusText}
-                </p>
-              </div>
-            </div>
-
-            <div className={styles.headerActions}>
-              <button
-                className={styles.iconBtn}
-                onClick={() => setShowSettings(!showSettings)}
-                title="Sarvam Voice Agent Settings"
-              >
-                ⚙️
-              </button>
-              {messages.length > 0 && (
-                <button
-                  className={styles.iconBtn}
-                  onClick={copyTranscript}
-                  title="Copy Transcript"
-                >
-                  📋
-                </button>
-              )}
-              <button
-                className={styles.iconBtn}
-                onClick={() => setIsOpen(false)}
-                title="Minimize"
-              >
-                —
-              </button>
-              <button
-                className={styles.iconBtn}
-                onClick={() => {
-                  setIsOpen(false);
-                  if (inCall) endSamvaadCall();
-                }}
-                title="Close"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          {/* Settings Drawer */}
-          {showSettings && (
-            <form className={styles.settingsPanel} onSubmit={saveSettings}>
-              <h4>Sarvam Samvaad Settings</h4>
-              <label>SAMVAAD_API_KEY</label>
-              <input
-                type="password"
-                placeholder="Paste your SAMVAAD_API_KEY"
-                value={samvaadKey}
-                onChange={(e) => setSamvaadKey(e.target.value)}
-              />
-              <label>Agent ID (app_id)</label>
-              <input
-                type="text"
-                value={appId}
-                onChange={(e) => setAppId(e.target.value)}
-              />
-              <div className={styles.settingsButtons}>
-                <button type="submit" className={styles.primaryBtn}>
-                  Save Settings
-                </button>
-                <button
-                  type="button"
-                  className={styles.secondaryBtn}
-                  onClick={() => setShowSettings(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Content Area */}
-          <div className={styles.contentArea}>
-            {messages.length === 0 ? (
-              <div className={styles.emptyState}>
-                <div
-                  className={`${styles.waveIcon} ${
-                    inCall || isSpeaking ? styles.waveActive : ''
-                  }`}
-                  style={{
-                    transform: audioLevel > 5 ? `scaleY(${1 + audioLevel / 60})` : 'none',
-                  }}
-                >
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-                <h3>Say hello</h3>
-                <p>Your conversation will appear here as you talk.</p>
-
-                <div className={styles.promptSuggestions}>
-                  <p className={styles.suggestTitle}>Suggested questions:</p>
-                  <button
-                    onClick={() =>
-                      handleSendMessage('Where is Sarvam AI located in my docs? Highlight the line.')
-                    }
-                  >
-                    📍 Where is Sarvam AI located? (Browse & Highlight)
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleSendMessage('How does SSO work between main and Learn?')
-                    }
-                  >
-                    🔐 How does SSO work between main and Learn?
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleSendMessage('What is the architecture overview of VartaLang?')
-                    }
-                  >
-                    🏛️ What is the architecture overview?
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className={styles.messageList}>
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={
-                      msg.sender === 'user' ? styles.userRow : styles.assistantRow
-                    }
-                  >
-                    {msg.sender === 'assistant' && (
-                      <span className={styles.senderLabel}>
-                        Sarvam · {msg.timestamp || '0:00'}
-                      </span>
-                    )}
-                    <div
-                      className={
-                        msg.sender === 'user'
-                          ? styles.userBubble
-                          : styles.assistantBubble
-                      }
-                    >
-                      <div className={styles.bubbleText}>{msg.text}</div>
-
-                      {/* Autonomous navigation confirmation badge (NO MANUAL CLICK NEEDED) */}
-                      {msg.citations && msg.citations.length > 0 && (
-                        <div className={styles.autonomousBadgeContainer}>
-                          {msg.citations.map((c, idx) => (
-                            <div key={idx} className={styles.autonomousBadge}>
-                              <span className={styles.autonomousBeacon}></span>
-                              <div className={styles.autonomousText}>
-                                <strong>Browsed to:</strong> <code>{c.filePath}</code>
-                                <span className={styles.linePill}>Line {c.targetLine || c.startLine}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {loading && (
-                  <div className={styles.assistantRow}>
-                    <span className={styles.senderLabel}>Sarvam is thinking...</span>
-                    <div className={styles.assistantBubble}>
-                      <div className={styles.typingIndicator}>
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-          </div>
-
-          {/* Bottom Bar Controls */}
-          <div className={styles.bottomBar}>
-            <div className={styles.inputRow}>
-              <input
-                type="text"
-                placeholder="Type your question..."
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSendMessage();
-                }}
-              />
-              <button
-                className={styles.sendBtn}
-                onClick={() => handleSendMessage()}
-                disabled={loading || !inputValue.trim()}
-              >
-                ➔
-              </button>
-            </div>
-
-            <button
-              className={`${styles.callActionBtn} ${inCall ? styles.callEnd : ''}`}
-              onClick={toggleCall}
-            >
-              <span className={styles.callIcon}>{inCall ? '🔴' : '📞'}</span>
-              <span>{inCall ? 'End Call' : 'Begin Call'}</span>
-            </button>
-          </div>
+  return <div className={styles.container}>
+    {isOpen && <div className={styles.modalWindow} role="dialog" aria-label="Samvaad voice assistant">
+      <div className={styles.header}>
+        <div className={styles.headerTitleGroup}>
+          <div className={styles.logoWrapper}><SarvamLogo size={26} /></div>
+          <div><h3 className={styles.title}>Samvaad</h3>
+            <p className={styles.subtitle}>{inCall ? `Live Call · ${formattedCallTime}` : callStatusText}</p></div>
         </div>
-      )}
-
-      {/* Collapsed Dock */}
-      {!isOpen && (
-        <div className={styles.dockBar}>
-          <div
-            className={styles.dockLeft}
-            onClick={() => setIsOpen(true)}
-            role="button"
-            tabIndex={0}
-          >
-            <SarvamLogo size={24} />
-            <span className={styles.dockTitle}>Docs Assistant</span>
-          </div>
-
-          <button className={styles.dockCallBtn} onClick={toggleCall}>
-            <span className={styles.callIcon}>📞</span>
-            <span>Begin Call</span>
-          </button>
-
-          <button
-            className={styles.dockCloseBtn}
-            onClick={() => setIsDockVisible(false)}
-            title="Hide Assistant"
-          >
-            ✕
-          </button>
+        <div className={styles.headerActions}>
+          <button className={styles.iconBtn} onClick={() => setShowSettings(!showSettings)} title="Samvaad settings">⚙️</button>
+          {messages.length > 0 && <button className={styles.iconBtn} onClick={copyTranscript} title="Copy transcript">📋</button>}
+          <button className={styles.iconBtn} onClick={() => setIsOpen(false)} title="Minimize">—</button>
+          <button className={styles.iconBtn} onClick={() => { setIsOpen(false); if (inCall) endSamvaadCall(); }} title="Close">✕</button>
         </div>
-      )}
-    </div>
-  );
+      </div>
+      {showSettings && <form className={styles.settingsPanel} onSubmit={saveSettings}>
+        <h4>Sarvam Samvaad Settings</h4>
+        <label>SAMVAAD_API_KEY</label>
+        <input type="password" placeholder="Paste your SAMVAAD_API_KEY" value={samvaadKey} onChange={(event) => setSamvaadKey(event.target.value)} />
+        <label>Agent ID (app_id)</label>
+        <input type="text" value={appId} onChange={(event) => setAppId(event.target.value)} />
+        <div className={styles.settingsButtons}>
+          <button type="submit" className={styles.primaryBtn}>Save Settings</button>
+          <button type="button" className={styles.secondaryBtn} onClick={() => setShowSettings(false)}>Cancel</button>
+        </div>
+      </form>}
+      <div className={styles.contentArea}>
+        {messages.length === 0 ? <div className={styles.emptyState}>
+          <div className={`${styles.waveIcon} ${inCall || isSpeaking ? styles.waveActive : ''}`} style={{transform: audioLevel > 5 ? `scaleY(${1 + audioLevel / 60})` : 'none'}}>
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <h3>Samvaad voice assistant</h3>
+          <p>Start a voice call to talk with the autonomous agent.</p>
+        </div> : <div className={styles.messageList}>
+          {messages.map((message) => <div key={message.id} className={message.sender === 'user' ? styles.userRow : styles.assistantRow}>
+            {message.sender === 'assistant' && <span className={styles.senderLabel}>Samvaad · {message.timestamp}</span>}
+            <div className={message.sender === 'user' ? styles.userBubble : styles.assistantBubble}>
+              <div className={styles.bubbleText}>{message.text}</div>
+            </div>
+          </div>)}
+          <div ref={messagesEndRef} />
+        </div>}
+      </div>
+      <div className={styles.bottomBar}>
+        <button className={`${styles.callActionBtn} ${inCall ? styles.callEnd : ''}`} onClick={toggleCall}>
+          <span className={styles.callIcon}>{inCall ? '🔴' : '📞'}</span><span>{inCall ? 'End Call' : 'Begin Call'}</span>
+        </button>
+      </div>
+    </div>}
+    {!isOpen && <div className={styles.dockBar}>
+      <div className={styles.dockLeft} onClick={() => setIsOpen(true)} role="button" tabIndex={0}>
+        <SarvamLogo size={24} /><span className={styles.dockTitle}>Samvaad</span>
+      </div>
+      <button className={styles.dockCallBtn} onClick={toggleCall}><span className={styles.callIcon}>📞</span><span>Begin Call</span></button>
+      <button className={styles.dockCloseBtn} onClick={() => setIsDockVisible(false)} title="Hide assistant">✕</button>
+    </div>}
+  </div>;
 }

@@ -307,13 +307,7 @@
   line-height: 1.45;
 }
 
-.promptSuggestions {
-  margin-top: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  text-align: left;
-}
+
 
 .suggestTitle {
   font-size: 0.74rem;
