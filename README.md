@@ -1,68 +1,79 @@
 # VartaLang Documentation
 
-Documentation for the VartaLang ecosystem: a platform for learning Indian
-languages and culture, powered by Sarvam AI. VartaLang combines human
-language exchange, practical resources, structured courses, and language-
-linked opportunities.
+The VartaLang documentation site is built with Docusaurus 3. It documents the VartaLang platform, its learning platform, and the services and APIs behind them.
 
-The ecosystem includes the main VartaLang web application and API, a separate
-VartaLang Learn web application and API, and a separately linked language
-games experience. Sarvam AI is integrated into the main platform's chat
-translation and on-demand message pronunciation; it does not power every
-product feature. See the [ecosystem introduction](docs/intro.md) and
-[architecture overview](docs/architecture/overview.md).
+Start with the [ecosystem introduction](docs/intro.md) or [architecture overview](docs/architecture/overview.md). The guides are organized under `docs/` by product area.
 
-## Development
+## Requirements
+
+- Node.js 20 or newer
+- npm
+
+## Local development
 
 ```bash
 npm install
 npm start
 ```
 
-## Build
+The start command generates the documentation assistant and developer search indexes, then starts Docusaurus at `http://localhost:3000`.
+
+Create and preview a production build with:
 
 ```bash
 npm run build
+npm run serve
 ```
 
-## Developer-docs gate
+## Site features
 
-The developer routes have a cosmetic sign-in prompt. Set
-`DEVELOPER_GATE_USERNAME` and `DEVELOPER_GATE_PASSWORD` in the Vercel build
-environment to enable it. These build-time values are included in the static
-client bundle, so this only discourages casual browsing; it does not secure
-confidential content. See [`.env.example`](.env.example) for the variable names
-and placeholder format; set the actual password directly in Vercel, not in Git.
-After sign-in, a separate developer-doc search index is loaded; developer pages
-remain excluded from the public navbar search index.
+- **Samvaad voice assistant:** available throughout the site. Visitors can start and end a live voice call, view a transcript, and copy it. Calls stop after two minutes; they also stop after five assistant turns without a user response.
+- **Documentation navigation:** the assistant searches the documentation index and can navigate to a matching passage and highlight it.
+- **Local documentation search:** the navbar search indexes public documentation and pages. Developer documentation is excluded from this index.
+- **Developer documentation prompt and search:** a separate prompt can unlock an index for `docs/development/`. The unlock is remembered for the current browser tab.
+- **Insufficient-credit handling:** if Samvaad reports insufficient credits, the assistant displays “The agent is temporarily unavailable. Please try again later or contact the internal team.” Other connection failures display their error message.
 
-## Documentation structure
+## Configuration
 
-- `docs/getting-started/` — getting started and account guides
-- `docs/platform/` — language exchange, jobs, courses, resources, and safety
-- `docs/architecture/` — applications, APIs, integrations, and SSO
-- `docs/development/` — team onboarding, repository internals, data models,
-  API inventory, local setup, operations, and contribution guidance
+Copy `.env.example` as a reference. For local development, create an ignored `.env` file. For deployments, configure environment variables in the hosting provider and rebuild the static site.
 
-## Varta Docs Agent (Powered by Sarvam AI)
+| Variable | Purpose |
+| --- | --- |
+| `SAMVAAD_API_KEY` | API key used by the browser voice assistant. Falls back to `SARVAM_API_KEY` if unset. |
+| `SAMVAAD_ORG_ID` | Samvaad organization ID. |
+| `SAMVAAD_WORKSPACE_ID` | Samvaad workspace ID. |
+| `SAMVAAD_APP_ID` | Samvaad agent ID. |
+| `DEVELOPER_GATE_USERNAME` | Username for the casual developer-doc prompt. |
+| `DEVELOPER_GATE_PASSWORD` | Password for the casual developer-doc prompt. |
+| `SARVAM_API_KEY`, `SARVAM_MODEL` | Optional standard Sarvam API settings; the current call flow uses Samvaad. |
+| `SARVAM_VOICE_AGENT_SCRIPT` | Optional voice-agent embed script URL. |
 
-The documentation features a **Docs Assistant** widget (styled identically to Sarvam AI's Docs Assistant) that answers questions from the documentation and pinpoints exact locations.
+The Begin Call settings menu has been removed. Visitors cannot change the API key or agent ID in the page. Samvaad values are supplied at build time and apply to all visitors of that deployment.
 
-### Key Capabilities:
-- **Exact Line Location & Highlighting**: When you ask *"where is it located in my docs?"* or click any citation card in the chat, it navigates directly to that document, smoothly scrolls to the exact section/sentence, and highlights the target line with an animated beacon glow (`?highlight=...&line=...`).
-- **Voice & Call Mode**: Supports `"Begin Call"` with live audio wave animations, speech recognition, and Indian English/Hindi voice synthesis (`window.speechSynthesis`), or typing via text input.
-- **Sarvam AI Integration**: Powered by Sarvam AI Chat Completion API (`sarvam-105b`, `sarvam-105b-conversations`, or `sarvam-2b`).
-- **Zero-Config Fallback**: Works immediately with offline line extraction even before an API key is provided.
+### Credential and access notes
 
-### Configuration:
-1. In the browser: Click the ⚙️ settings icon in the Docs Assistant header and paste your `SARVAM_API_KEY`.
-2. Via environment variables: Add `SARVAM_API_KEY=your_key` in `.env` or Vercel environment variables.
+The Samvaad browser SDK needs the API key in the client, so a key supplied through Docusaurus `customFields` is included in the public site bundle and can be inspected by visitors. Use a key with appropriate provider-side restrictions and usage limits. Do not treat this static frontend as a way to keep the key secret; a server-side credential or token flow is needed for that.
 
-### Terminal CLI:
-You can also ask questions from the terminal:
+The developer-doc prompt is also a client-side browsing gate, not authentication or access control. Its values are compiled into the static bundle, and the developer documents and search index are served as static files. Do not put confidential information in these docs or rely on the prompt to protect them.
 
-```bash
-npm run agent "Where is Sarvam AI integrated?"
-npm run agent "Where are the API endpoints documented?"
-```
+Never commit a real `.env`, API key, password, or other credential. `.env.example` contains placeholders and reference values only.
 
+## Documentation map
+
+- `docs/getting-started/` — account and profile setup
+- `docs/platform/` — language exchange, jobs, courses, learning resources, and safety
+- `docs/architecture/` — system design, services, and platform boundaries
+- `docs/development/` — onboarding, repository guides, APIs, data, operations, and contribution guidance
+
+## Index generation
+
+The `npm start` and `npm run build` commands regenerate these indexes:
+
+- `static/varta-docs-index.json` — searchable chunks from Markdown and MDX files under `docs/`, used by the assistant.
+- `static/developer-search-index.json` — search index for `docs/development/`, loaded by developer-doc search.
+
+Edit source documentation under `docs/`; these JSON files are generated outputs. See [contribution guidance](docs/development/contributing.md) before submitting changes.
+
+## Deployment
+
+The site is configured for `https://docs.vartalang.in` with `/` as its base URL. Set the required build-time environment variables in the deployment provider, then run `npm run build`. The generated `build/` directory is the static site output.
