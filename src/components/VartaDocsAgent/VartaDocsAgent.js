@@ -6,9 +6,8 @@ import {loadDocsCorpus, searchDocs} from '../../utils/vartaAgentService';
 import {speakWithSarvamTTS, stopAudioPlayback} from '../../utils/vartaAudioService';
 import styles from './VartaDocsAgent.module.css';
 
-const STORAGE_KEY_SAMVAAD_KEY = 'varta_samvaad_api_key';
-const STORAGE_KEY_APP_ID = 'varta_samvaad_app_id';
 const MAX_CALL_DURATION_SECONDS = 120;
+const MAX_UNANSWERED_RESPONSES = 5;
 
 export default function VartaDocsAgent() {
   const {siteConfig} = useDocusaurusContext();
@@ -21,24 +20,17 @@ export default function VartaDocsAgent() {
   const [callDuration, setCallDuration] = useState(0);
   const [callStatusText, setCallStatusText] = useState('Call ended · 0:00');
   const [messages, setMessages] = useState([]);
-  const [showSettings, setShowSettings] = useState(false);
-  const [samvaadKey, setSamvaadKey] = useState(fields.samvaadApiKey || '');
-  const [appId, setAppId] = useState(fields.samvaadAppId || 'VartaLang-D-b7f3961b-1e59');
+  const samvaadKey = fields.samvaadApiKey || '';
+  const appId = fields.samvaadAppId || 'VartaLang-D-b7f3961b-1e59';
   const [audioLevel, setAudioLevel] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [corpus, setCorpus] = useState(null);
   const messagesEndRef = useRef(null);
   const callTimerRef = useRef(null);
   const samvaadAgentRef = useRef(null);
+  const unansweredResponsesRef = useRef(0);
   const orgId = fields.samvaadOrgId || '01a1fcf2-3c88-74a1-a6fd-014e7c891c50';
   const workspaceId = fields.samvaadWorkspaceId || '01a1fcf2-3c98-7607-b013-826e800cc576';
-
-  useEffect(() => {
-    const savedKey = window.localStorage.getItem(STORAGE_KEY_SAMVAAD_KEY);
-    const savedAppId = window.localStorage.getItem(STORAGE_KEY_APP_ID);
-    if (savedKey) setSamvaadKey(savedKey);
-    if (savedAppId) setAppId(savedAppId);
-  }, []);
 
   useEffect(() => {
     loadDocsCorpus(siteConfig.baseUrl)
@@ -115,13 +107,14 @@ export default function VartaDocsAgent() {
   async function startSamvaadCall() {
     setIsOpen(true);
     setInCall(true);
+    unansweredResponsesRef.current = 0;
     setCallStatusText('Connecting to Sarvam Samvaad...');
     const activeKey = samvaadKey || fields.samvaadApiKey;
 
     if (!activeKey?.trim()) {
       setInCall(false);
       setCallStatusText('API key required');
-      const text = 'Add your SAMVAAD_API_KEY in settings to start a live Samvaad voice call.';
+      const text = 'Samvaad voice calling is not configured yet.';
       setMessages((previous) => [...previous, {id: Date.now(), sender: 'assistant', text, timestamp: '0:00'}]);
       speakWithSarvamTTS({text, onStart: () => setIsSpeaking(true), onEnd: () => setIsSpeaking(false)});
       return;
@@ -152,6 +145,20 @@ export default function VartaDocsAgent() {
         transcriptCallback: (message) => {
           const role = message.role === 'user' ? 'user' : 'assistant';
           const transcriptText = message.content || '';
+          if (role === 'user' && transcriptText.trim()) {
+            unansweredResponsesRef.current = 0;
+          } else if (role === 'assistant' && transcriptText.trim()) {
+            unansweredResponsesRef.current += 1;
+            if (unansweredResponsesRef.current >= MAX_UNANSWERED_RESPONSES) {
+              setMessages((previous) => [...previous, {
+                id: Date.now() + Math.random(),
+                sender: 'assistant',
+                text: 'Ending the call because there has been no response for several turns.',
+                timestamp: formattedCallTime,
+              }]);
+              endSamvaadCall();
+            }
+          }
           setMessages((previous) => [...previous, {
             id: Date.now() + Math.random(),
             sender: role,
@@ -176,7 +183,7 @@ export default function VartaDocsAgent() {
       setCallStatusText('Connection failed');
       setMessages((previous) => [...previous, {
         id: Date.now(), sender: 'assistant',
-        text: `Could not connect to Sarvam Samvaad: ${error.message}. Check the API key in settings.`,
+        text: `Could not connect to Sarvam Samvaad: ${error.message}.`,
         timestamp: '0:00',
       }]);
     }
@@ -187,12 +194,13 @@ export default function VartaDocsAgent() {
     setIsSpeaking(false);
     stopAudioPlayback();
     if (samvaadAgentRef.current) {
+      const agent = samvaadAgentRef.current;
+      samvaadAgentRef.current = null;
       try {
-        await samvaadAgentRef.current.stop();
+        await agent.stop();
       } catch (error) {
         console.warn('Could not stop Samvaad call:', error);
       }
-      samvaadAgentRef.current = null;
     }
     setCallStatusText(`Call ended · ${formattedCallTime}`);
   }
@@ -200,13 +208,6 @@ export default function VartaDocsAgent() {
   function toggleCall() {
     if (inCall) endSamvaadCall();
     else startSamvaadCall();
-  }
-
-  function saveSettings(event) {
-    event.preventDefault();
-    window.localStorage.setItem(STORAGE_KEY_SAMVAAD_KEY, samvaadKey);
-    window.localStorage.setItem(STORAGE_KEY_APP_ID, appId);
-    setShowSettings(false);
   }
 
   function copyTranscript() {
@@ -231,23 +232,11 @@ export default function VartaDocsAgent() {
             <p className={styles.subtitle}>{inCall ? `Live Call · ${formattedCallTime}` : callStatusText}</p></div>
         </div>
         <div className={styles.headerActions}>
-          <button className={styles.iconBtn} onClick={() => setShowSettings(!showSettings)} title="Samvaad settings">⚙️</button>
           {messages.length > 0 && <button className={styles.iconBtn} onClick={copyTranscript} title="Copy transcript">📋</button>}
           <button className={styles.iconBtn} onClick={() => setIsOpen(false)} title="Minimize">—</button>
           <button className={styles.iconBtn} onClick={() => { setIsOpen(false); if (inCall) endSamvaadCall(); }} title="Close">✕</button>
         </div>
       </div>
-      {showSettings && <form className={styles.settingsPanel} onSubmit={saveSettings}>
-        <h4>Sarvam Samvaad Settings</h4>
-        <label>SAMVAAD_API_KEY</label>
-        <input type="password" placeholder="Paste your SAMVAAD_API_KEY" value={samvaadKey} onChange={(event) => setSamvaadKey(event.target.value)} />
-        <label>Agent ID (app_id)</label>
-        <input type="text" value={appId} onChange={(event) => setAppId(event.target.value)} />
-        <div className={styles.settingsButtons}>
-          <button type="submit" className={styles.primaryBtn}>Save Settings</button>
-          <button type="button" className={styles.secondaryBtn} onClick={() => setShowSettings(false)}>Cancel</button>
-        </div>
-      </form>}
       <div className={styles.contentArea}>
         {messages.length === 0 ? <div className={styles.emptyState}>
           <div className={`${styles.waveIcon} ${inCall || isSpeaking ? styles.waveActive : ''}`} style={{transform: audioLevel > 5 ? `scaleY(${1 + audioLevel / 60})` : 'none'}}>
