@@ -12,6 +12,7 @@ const config = {
     },
     sarvamApiKey: process.env.SARVAM_API_KEY || '',
     sarvamModel: process.env.SARVAM_MODEL || 'sarvam-105b',
+    sarvamVoiceAgentScript: process.env.SARVAM_VOICE_AGENT_SCRIPT || '',
   },
   headTags: [
     {

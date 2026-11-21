@@ -29,6 +29,19 @@ export default function Root({children}) {
     setSessionChecked(true);
   }, [isProtectedPath]);
 
+  // Load official Sarvam Voice Agent embed script if configured
+  useEffect(() => {
+    const scriptSrc = siteConfig.customFields?.sarvamVoiceAgentScript;
+    if (scriptSrc && typeof document !== 'undefined') {
+      if (!document.querySelector(`script[src="${scriptSrc}"]`)) {
+        const script = document.createElement('script');
+        script.src = scriptSrc;
+        script.async = true;
+        document.body.appendChild(script);
+      }
+    }
+  }, [siteConfig.customFields?.sarvamVoiceAgentScript]);
+
   function lockDeveloperDocs() {
     window.sessionStorage.removeItem(SESSION_KEY);
     setUnlocked(false);
