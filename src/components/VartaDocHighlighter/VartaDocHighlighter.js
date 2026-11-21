@@ -126,8 +126,8 @@ export default function VartaDocHighlighter() {
       badge.className = styles.sourceBadge;
       badge.innerHTML = `
         <span class="${styles.pulseDot}"></span>
-        <span>?? Agent highlighted line ${lineNumber ? lineNumber : ''}: "${cleanTarget.slice(0, 50)}..."</span>
-        <button class="${styles.clearBtn}" title="Dismiss highlight">?</button>
+        <span>Agent highlighted line ${lineNumber ? lineNumber : ''}: "${cleanTarget.slice(0, 50)}..."</span>
+        <button class="${styles.clearBtn}" title="Dismiss highlight">×</button>
       `;
 
       badge.querySelector(`.${styles.clearBtn}`).onclick = () => {
@@ -195,7 +195,7 @@ export default function VartaDocHighlighter() {
         <div className={styles.autonomousTopBar} role="status">
           <span className={styles.topBarPulse}></span>
           <span>
-            ?? <strong>Samvaad:</strong> Autonomously scrolled to{' '}
+            <strong>Samvaad:</strong> Autonomously scrolled to{' '}
             <code>{autonomousNotice.filePath}</code>{' '}
             {autonomousNotice.line ? `(Line ${autonomousNotice.line})` : ''}
           </span>
@@ -203,7 +203,7 @@ export default function VartaDocHighlighter() {
             onClick={() => setAutonomousNotice(null)}
             className={styles.topBarClose}
           >
-            ?
+            ×
           </button>
         </div>
       )}

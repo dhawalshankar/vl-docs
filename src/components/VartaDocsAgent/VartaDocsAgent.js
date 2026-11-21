@@ -8,6 +8,7 @@ import styles from './VartaDocsAgent.module.css';
 
 const STORAGE_KEY_SAMVAAD_KEY = 'varta_samvaad_api_key';
 const STORAGE_KEY_APP_ID = 'varta_samvaad_app_id';
+const MAX_CALL_DURATION_SECONDS = 120;
 
 export default function VartaDocsAgent() {
   const {siteConfig} = useDocusaurusContext();
@@ -58,7 +59,18 @@ export default function VartaDocsAgent() {
   useEffect(() => {
     if (inCall) {
       setCallDuration(0);
-      callTimerRef.current = setInterval(() => setCallDuration((value) => value + 1), 1000);
+      callTimerRef.current = setInterval(() => setCallDuration((value) => {
+        if (value + 1 >= MAX_CALL_DURATION_SECONDS) {
+          if (samvaadAgentRef.current) samvaadAgentRef.current.stop().catch(() => {});
+          samvaadAgentRef.current = null;
+          setInCall(false);
+          setIsSpeaking(false);
+          stopAudioPlayback();
+          setCallStatusText('Call ended · 2:00 (maximum duration)');
+          return MAX_CALL_DURATION_SECONDS;
+        }
+        return value + 1;
+      }), 1000);
     } else if (callTimerRef.current) {
       clearInterval(callTimerRef.current);
     }
