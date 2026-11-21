@@ -1,15 +1,16 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {useLocation} from '@docusaurus/router';
 import styles from './VartaDocHighlighter.module.css';
 
 /**
- * In-Page Document Line & Text Highlighter
- * Automatically scrolls to and highlights lines/sentences in the documentation.
+ * Autonomous In-Page Document Navigator & Line Highlighter
+ * Automatically scrolls through documentation pages and highlights exact lines in real time.
  */
 export default function VartaDocHighlighter() {
   const location = useLocation();
   const highlightRef = useRef(null);
   const badgeRef = useRef(null);
+  const [autonomousNotice, setAutonomousNotice] = useState(null);
 
   function clearHighlight() {
     if (badgeRef.current && badgeRef.current.parentNode) {
@@ -17,22 +18,15 @@ export default function VartaDocHighlighter() {
       badgeRef.current = null;
     }
 
-    const marks = document.querySelectorAll('.varta-doc-highlight-active');
-    marks.forEach((mark) => {
-      const parent = mark.parentNode;
-      if (parent) {
-        while (mark.firstChild) {
-          parent.insertBefore(mark.firstChild, mark);
-        }
-        parent.removeChild(mark);
-        parent.normalize();
-      }
+    const activeMarks = document.querySelectorAll(`.${styles.highlightPulse}, .${styles.highlightSteady}`);
+    activeMarks.forEach((el) => {
+      el.classList.remove(styles.highlightPulse, styles.highlightSteady);
     });
 
     highlightRef.current = null;
   }
 
-  function applyHighlight(targetText, lineNumber) {
+  function applyAutonomousScrollAndHighlight(targetText, lineNumber, filePath) {
     clearHighlight();
 
     if (!targetText && !lineNumber) return;
@@ -53,7 +47,6 @@ export default function VartaDocHighlighter() {
     let matchedElement = null;
 
     if (cleanTarget.length > 5) {
-      // Find element with text content
       const walker = document.createTreeWalker(
         container,
         NodeFilter.SHOW_TEXT,
@@ -63,7 +56,6 @@ export default function VartaDocHighlighter() {
 
       let node;
       const targetLower = cleanTarget.toLowerCase();
-      // Try first with 40-character phrases if long
       const phrases = [
         targetLower,
         cleanTarget.slice(0, 45).toLowerCase().trim(),
@@ -84,68 +76,110 @@ export default function VartaDocHighlighter() {
       }
     }
 
-    // Fallback: If not found by exact text and hash exists
+    // Fallback: If not found by text, try hash anchor
     if (!matchedElement && window.location.hash) {
       const id = window.location.hash.replace('#', '');
       matchedElement = document.getElementById(id);
     }
 
+    // Fallback: Match heading or paragraph by approximate line or keyword
+    if (!matchedElement && cleanTarget) {
+      const words = cleanTarget.split(/\s+/).filter((w) => w.length > 3);
+      if (words.length > 0) {
+        const paragraphs = container.querySelectorAll('p, li, tr, blockquote, h2, h3, h4');
+        let bestP = null;
+        let maxMatches = 0;
+        paragraphs.forEach((p) => {
+          const pText = p.textContent.toLowerCase();
+          let count = 0;
+          words.forEach((w) => {
+            if (pText.includes(w.toLowerCase())) count++;
+          });
+          if (count > maxMatches) {
+            maxMatches = count;
+            bestP = p;
+          }
+        });
+        if (maxMatches >= 2) {
+          matchedElement = bestP;
+        }
+      }
+    }
+
     if (matchedElement) {
-      // Highlight element or text
+      // 1. Autonomous smooth scrolling through the page
+      const rect = matchedElement.getBoundingClientRect();
+      const absoluteTop = window.pageYOffset + rect.top;
+      const targetTop = Math.max(0, absoluteTop - window.innerHeight / 2 + rect.height / 2);
+
+      // Perform smooth scrolling autonomously
+      window.scrollTo({
+        top: targetTop,
+        behavior: 'smooth',
+      });
+
+      // 2. Apply pulsing highlight effect
       matchedElement.classList.add(styles.highlightPulse);
 
-      // Create floating source badge
+      // 3. Create floating beacon badge directly above the line
       const badge = document.createElement('div');
       badge.className = styles.sourceBadge;
       badge.innerHTML = `
         <span class="${styles.pulseDot}"></span>
-        <span>📍 Varta Docs Agent: ${lineNumber ? `Line ${lineNumber}` : 'Source located here'}</span>
+        <span>🤖 Agent highlighted line ${lineNumber ? lineNumber : ''}: "${cleanTarget.slice(0, 50)}..."</span>
         <button class="${styles.clearBtn}" title="Dismiss highlight">✕</button>
       `;
 
       badge.querySelector(`.${styles.clearBtn}`).onclick = () => {
         clearHighlight();
+        setAutonomousNotice(null);
       };
 
       matchedElement.insertAdjacentElement('beforebegin', badge);
       badgeRef.current = badge;
       highlightRef.current = matchedElement;
 
-      // Scroll smoothly to center
-      setTimeout(() => {
-        matchedElement.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-      }, 150);
+      // 4. Show top autonomous notification bar
+      setAutonomousNotice({
+        filePath: filePath || location.pathname,
+        line: lineNumber,
+      });
 
-      // Clean pulse class after animation
       setTimeout(() => {
-        matchedElement.classList.add(styles.highlightSteady);
-      }, 2500);
+        setAutonomousNotice(null);
+      }, 5000);
+
+      // Keep steady highlight after pulse
+      setTimeout(() => {
+        if (matchedElement) {
+          matchedElement.classList.remove(styles.highlightPulse);
+          matchedElement.classList.add(styles.highlightSteady);
+        }
+      }, 3000);
     }
   }
 
+  // Handle URL changes with ?highlight= and ?line=
   useEffect(() => {
-    // Check URL parameters
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const highlightParam = params.get('highlight');
     const lineParam = params.get('line');
 
     if (highlightParam || lineParam) {
-      // Allow DOM to settle
       const timer = setTimeout(() => {
-        applyHighlight(highlightParam, lineParam);
-      }, 300);
+        applyAutonomousScrollAndHighlight(highlightParam, lineParam);
+      }, 350);
       return () => clearTimeout(timer);
     }
   }, [location.pathname, location.search, location.hash]);
 
+  // Handle live custom event triggered autonomously by the agent
   useEffect(() => {
-    // Custom event listener for instant in-tab triggers from the agent widget
     function handleEvent(event) {
-      const {text, line} = event.detail || {};
-      applyHighlight(text, line);
+      const {text, line, filePath} = event.detail || {};
+      setTimeout(() => {
+        applyAutonomousScrollAndHighlight(text, line, filePath);
+      }, 150);
     }
 
     window.addEventListener('varta:highlight', handleEvent);
@@ -153,7 +187,26 @@ export default function VartaDocHighlighter() {
       window.removeEventListener('varta:highlight', handleEvent);
       clearHighlight();
     };
-  }, []);
+  }, [location.pathname]);
 
-  return null;
+  return (
+    <>
+      {autonomousNotice && (
+        <div className={styles.autonomousTopBar} role="status">
+          <span className={styles.topBarPulse}></span>
+          <span>
+            🤖 <strong>Varta Docs Agent:</strong> Autonomously scrolled to{' '}
+            <code>{autonomousNotice.filePath}</code>{' '}
+            {autonomousNotice.line ? `(Line ${autonomousNotice.line})` : ''}
+          </span>
+          <button
+            onClick={() => setAutonomousNotice(null)}
+            className={styles.topBarClose}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+    </>
+  );
 }

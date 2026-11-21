@@ -1,5 +1,6 @@
 import React, {useState, useEffect, useRef} from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import {useHistory, useLocation} from '@docusaurus/router';
 import SarvamLogo from './SarvamLogo';
 import {loadDocsCorpus, askSarvamDocsAgent, searchDocs} from '../../utils/vartaAgentService';
 import {speakWithSarvamTTS, stopAudioPlayback} from '../../utils/vartaAudioService';
@@ -9,6 +10,8 @@ const STORAGE_KEY_SAMVAAD_KEY = 'varta_samvaad_api_key';
 const STORAGE_KEY_APP_ID = 'varta_samvaad_app_id';
 
 export default function VartaDocsAgent() {
+  const history = useHistory();
+  const location = useLocation();
   const {siteConfig} = useDocusaurusContext();
   const fields = siteConfig.customFields || {};
 
@@ -42,7 +45,7 @@ export default function VartaDocsAgent() {
   const callTimerRef = useRef(null);
   const samvaadAgentRef = useRef(null);
 
-  // Load saved credentials from localStorage
+  // Load saved credentials
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedKey = window.localStorage.getItem(STORAGE_KEY_SAMVAAD_KEY);
@@ -95,30 +98,36 @@ export default function VartaDocsAgent() {
     .toString()
     .padStart(2, '0')}`;
 
-  // Handle location highlight navigation
-  function navigateAndHighlight(citation) {
+  /**
+   * Autonomously browse to document and scroll to highlighted line
+   */
+  function autonomouslyBrowseTo(citation) {
     if (!citation) return;
-    const targetUrl = `${citation.docPath}?highlight=${encodeURIComponent(
+    const targetPath = citation.docPath;
+    const targetUrl = `${targetPath}?highlight=${encodeURIComponent(
       citation.quote || ''
     )}&line=${citation.targetLine || citation.startLine}${citation.anchor || ''}`;
 
+    // 1. Navigate page autonomously
+    if (location.pathname !== targetPath) {
+      history.push(targetUrl);
+    } else {
+      window.history.pushState(null, '', targetUrl);
+    }
+
+    // 2. Trigger autonomous in-page scroll & pulse
     window.dispatchEvent(
       new CustomEvent('varta:highlight', {
         detail: {
           text: citation.quote,
           line: citation.targetLine || citation.startLine,
+          filePath: citation.filePath,
         },
       })
     );
-
-    if (window.location.pathname !== citation.docPath) {
-      window.location.href = targetUrl;
-    } else {
-      window.history.pushState(null, '', targetUrl);
-    }
   }
 
-  // Check and extract doc citations from assistant responses
+  // Extract docs citations from answer text
   function extractCitations(text, currentCorpus) {
     if (!currentCorpus) return [];
     const matches = searchDocs(currentCorpus, text, 2);
@@ -144,12 +153,11 @@ export default function VartaDocsAgent() {
     const activeKey = samvaadKey || fields.samvaadApiKey;
 
     if (!activeKey || activeKey.trim() === '') {
-      // If no Samvaad key is found, prompt user to enter key
       setCallStatusText('Live Call · 0:00');
       const welcome = {
         id: Date.now(),
         sender: 'assistant',
-        text: "Namaste! I'm your Varta Docs Voice Assistant. To connect to your live Sarvam Samvaad voice agent, please enter your SAMVAAD_API_KEY in the settings (⚙️) above. You can also type any docs question right now!",
+        text: "Namaste! I'm your Varta Docs Voice Assistant. To connect to your live Sarvam Samvaad voice agent, please enter your SAMVAAD_API_KEY in the settings (⚙️) above. You can also type or speak any docs question right now, and I will autonomously browse to the answer!",
         timestamp: '0:00',
       };
       setMessages((prev) => [...prev, welcome]);
@@ -162,7 +170,6 @@ export default function VartaDocsAgent() {
     }
 
     try {
-      // Dynamically import sarvam-conv-ai-sdk browser module
       const {ConversationAgent, BrowserAudioInterface, InteractionType} =
         await import('sarvam-conv-ai-sdk/browser');
 
@@ -211,13 +218,11 @@ export default function VartaDocsAgent() {
             },
           ]);
 
-          // Auto-highlight if user asked where something is located
-          if (
-            role === 'assistant' &&
-            citations.length > 0 &&
-            content.toLowerCase().includes('located')
-          ) {
-            setTimeout(() => navigateAndHighlight(citations[0]), 800);
+          // Autonomously browse to the page and scroll to highlighted line!
+          if (role === 'assistant' && citations.length > 0) {
+            setTimeout(() => {
+              autonomouslyBrowseTo(citations[0]);
+            }, 600);
           }
         },
         endCallback: async () => {
@@ -268,7 +273,7 @@ export default function VartaDocsAgent() {
     }
   }
 
-  // Text chat submission
+  // Text chat submission with autonomous browsing
   async function handleSendMessage(queryText) {
     const query = (queryText || inputValue).trim();
     if (!query) return;
@@ -308,7 +313,7 @@ export default function VartaDocsAgent() {
 
       setMessages((prev) => [...prev, assistantMsg]);
 
-      // Speak using Sarvam Bulbul TTS
+      // Speak answer naturally
       speakWithSarvamTTS({
         text: result.answer,
         apiKey: samvaadKey || fields.samvaadApiKey,
@@ -316,14 +321,11 @@ export default function VartaDocsAgent() {
         onEnd: () => setIsSpeaking(false),
       });
 
-      // Jump & highlight if "where" or "highlight" requested
-      const lowerQ = query.toLowerCase();
-      if (
-        (lowerQ.includes('where') || lowerQ.includes('highlight') || lowerQ.includes('locate')) &&
-        result.citations &&
-        result.citations.length > 0
-      ) {
-        setTimeout(() => navigateAndHighlight(result.citations[0]), 900);
+      // Autonomously browse to the page, scroll to line, and highlight!
+      if (result.citations && result.citations.length > 0) {
+        setTimeout(() => {
+          autonomouslyBrowseTo(result.citations[0]);
+        }, 500);
       }
     } catch (err) {
       setMessages((prev) => [
@@ -375,7 +377,7 @@ export default function VartaDocsAgent() {
       {/* Expanded Modal Window */}
       {isOpen && (
         <div className={styles.modalWindow} role="dialog" aria-label="Docs Assistant">
-          {/* Header (Exact Sarvam Layout) */}
+          {/* Header */}
           <div className={styles.header}>
             <div className={styles.headerTitleGroup}>
               <div className={styles.logoWrapper}>
@@ -486,7 +488,7 @@ export default function VartaDocsAgent() {
                       handleSendMessage('Where is Sarvam AI located in my docs? Highlight the line.')
                     }
                   >
-                    📍 Where is Sarvam AI located? Highlight the line
+                    📍 Where is Sarvam AI located? (Browse & Highlight)
                   </button>
                   <button
                     onClick={() =>
@@ -527,28 +529,16 @@ export default function VartaDocsAgent() {
                     >
                       <div className={styles.bubbleText}>{msg.text}</div>
 
-                      {/* Line location & highlight card */}
+                      {/* Autonomous navigation confirmation badge (NO MANUAL CLICK NEEDED) */}
                       {msg.citations && msg.citations.length > 0 && (
-                        <div className={styles.citationsContainer}>
+                        <div className={styles.autonomousBadgeContainer}>
                           {msg.citations.map((c, idx) => (
-                            <div key={idx} className={styles.citationCard}>
-                              <div className={styles.citationHeader}>
-                                <span>📍 {c.filePath}</span>
-                                <span className={styles.citationLines}>
-                                  Line {c.targetLine || c.startLine}
-                                </span>
+                            <div key={idx} className={styles.autonomousBadge}>
+                              <span className={styles.autonomousBeacon}></span>
+                              <div className={styles.autonomousText}>
+                                <strong>Browsed to:</strong> <code>{c.filePath}</code>
+                                <span className={styles.linePill}>Line {c.targetLine || c.startLine}</span>
                               </div>
-                              {c.quote && (
-                                <p className={styles.citationQuote}>
-                                  "{c.quote.slice(0, 110)}..."
-                                </p>
-                              )}
-                              <button
-                                className={styles.highlightActionBtn}
-                                onClick={() => navigateAndHighlight(c)}
-                              >
-                                🎯 Go to line & highlight
-                              </button>
                             </div>
                           ))}
                         </div>
@@ -605,7 +595,7 @@ export default function VartaDocsAgent() {
         </div>
       )}
 
-      {/* Collapsed Dock (Exact Sarvam Layout) */}
+      {/* Collapsed Dock */}
       {!isOpen && (
         <div className={styles.dockBar}>
           <div

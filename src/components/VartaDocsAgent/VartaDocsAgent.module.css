@@ -396,70 +396,58 @@
   word-break: break-word;
 }
 
-/* Citations & Line Highlight Cards */
-.citationsContainer {
-  margin-top: 0.85rem;
+/* Autonomous Navigation Badge */
+.autonomousBadgeContainer {
+  margin-top: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.45rem;
 }
 
-.citationCard {
-  background: #ffffff;
-  border: 1px solid #e4e4e7;
-  border-radius: 10px;
-  padding: 0.65rem 0.8rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-}
-
-.citationHeader {
+.autonomousBadge {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: #3f3f46;
-  margin-bottom: 0.35rem;
+  gap: 0.55rem;
+  background: rgba(201, 79, 18, 0.08);
+  border: 1px solid rgba(201, 79, 18, 0.25);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.76rem;
+  color: #111111;
 }
 
-.citationLines {
+.autonomousBeacon {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c94f12;
+  box-shadow: 0 0 8px #c94f12;
+  animation: beaconPulse 1.2s infinite;
+  flex-shrink: 0;
+}
+
+.autonomousText {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.autonomousText code {
+  background: rgba(0, 0, 0, 0.06);
+  color: #c94f12;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+}
+
+.linePill {
   background: #ffedd5;
   color: #c2410c;
-  padding: 0.15rem 0.45rem;
+  padding: 0.1rem 0.35rem;
   border-radius: 4px;
-  font-size: 0.7rem;
-}
-
-.citationQuote {
-  margin: 0 0 0.55rem;
-  font-size: 0.77rem;
-  color: #52525b;
-  font-style: italic;
-  line-height: 1.4;
-  border-left: 2px solid #cbd5e1;
-  padding-left: 0.45rem;
-}
-
-.highlightActionBtn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  background: #111111;
-  color: #ffffff;
-  border: none;
-  border-radius: 7px;
-  padding: 0.45rem 0.75rem;
-  font-size: 0.78rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, transform 0.15s;
-}
-
-.highlightActionBtn:hover {
-  background: #c94f12;
-  transform: translateY(-1px);
+  font-size: 0.68rem;
 }
 
 /* Typing Indicator */
