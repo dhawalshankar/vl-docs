@@ -179,11 +179,18 @@ export default function VartaDocsAgent() {
       setCallStatusText(`Live Call · ${formattedCallTime}`);
     } catch (error) {
       console.warn('Samvaad connection error:', error);
+      const errorDetails = [error?.message, error?.cause?.message, error?.code, error?.type]
+        .filter(Boolean)
+        .join(' ');
+      const isInsufficientCredits = /\b402\b|insufficient[_ ]balance|insufficient credits/i.test(errorDetails);
+      const userMessage = isInsufficientCredits
+        ? 'The agent is temporarily unavailable. Please try again later or contact the internal team.'
+        : `Could not connect to Sarvam Samvaad: ${error.message}.`;
       setInCall(false);
-      setCallStatusText('Connection failed');
+      setCallStatusText(isInsufficientCredits ? 'Agent temporarily unavailable' : 'Connection failed');
       setMessages((previous) => [...previous, {
         id: Date.now(), sender: 'assistant',
-        text: `Could not connect to Sarvam Samvaad: ${error.message}.`,
+        text: userMessage,
         timestamp: '0:00',
       }]);
     }
